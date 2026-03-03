@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next"
 import { Space_Grotesk, Playfair_Display, JetBrains_Mono, Press_Start_2P } from "next/font/google"
-import { Analytics } from "@vercel/analytics/next"
 import { ThemeProvider } from "@/lib/theme"
 import "./globals.css"
 
@@ -48,7 +47,6 @@ export default function RootLayout({
         <ThemeProvider>
           {children}
         </ThemeProvider>
-        <Analytics />
       </body>
     </html>
   )
