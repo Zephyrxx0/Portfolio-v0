@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useMemo } from "react"
+import { useTheme } from "@/lib/theme"
 
 interface Skill {
   name: string
@@ -31,10 +32,43 @@ const JOKE_LINES = [
   "> git commit -m 'idk it works'",
 ]
 
-function buildBar(level: number): string {
-  const filled = Math.round(level / 10)
-  const empty = 10 - filled
-  return "\u2588".repeat(filled) + "\u2591".repeat(empty)
+// Theme-aware color palette
+function useTerminalColors() {
+  const { theme } = useTheme()
+
+  return useMemo(() => {
+    if (theme === "dark") {
+      return {
+        bg: "#0a0a0a",
+        titlebar: "#1a1a1a",
+        titleBorder: "#2a2a2a",
+        border: "#f0f0f0",
+        shadow: "#00ff9d",
+        accent: "#00ff9d",
+        text: "#f0f0f0",
+        muted: "#555",
+        vibes: "#ff6b9d",
+        prompt: "#f0f0f0",
+        cursor: "#00ff9d",
+        titleText: "#555",
+      }
+    }
+    // Earthy parchment/manuscript theme
+    return {
+      bg: "#1a1208",
+      titlebar: "#2a1f10",
+      titleBorder: "#3a2f18",
+      border: "#f5f0e8",
+      shadow: "#c84b00",
+      accent: "#c84b00",
+      text: "#f5f0e8",
+      muted: "#7a6a55",
+      vibes: "#cd853f",
+      prompt: "#f5f0e8",
+      cursor: "#c84b00",
+      titleText: "#7a6a55",
+    }
+  }, [theme])
 }
 
 export default function SkillsSection() {
@@ -43,6 +77,7 @@ export default function SkillsSection() {
   const [jokeIdx, setJokeIdx] = useState(0)
   const [typingJoke, setTypingJoke] = useState("")
   const [typingComplete, setTypingComplete] = useState(false)
+  const colors = useTerminalColors()
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -87,7 +122,6 @@ export default function SkillsSection() {
     return () => clearInterval(timer)
   }, [visible, jokeIdx])
 
-  // Group skills by category
   const categories = Array.from(new Set(SKILLS.map((s) => s.category)))
 
   return (
@@ -95,23 +129,28 @@ export default function SkillsSection() {
       id="skills"
       ref={sectionRef}
       className="relative px-6 py-24 md:py-32"
-      style={{ background: "#0a0a0a" }} // Always dark
+      style={{
+        background: colors.bg,
+        transition: "background-color 500ms ease",
+      }}
     >
       <div className="mx-auto max-w-4xl">
         {/* Terminal chrome */}
         <div
           className="overflow-hidden"
           style={{
-            border: "3px solid #f0f0f0",
-            boxShadow: "4px 4px 0 #00ff9d",
+            border: `3px solid ${colors.border}`,
+            boxShadow: `4px 4px 0 ${colors.shadow}`,
+            transition: "border-color 500ms ease, box-shadow 500ms ease",
           }}
         >
           {/* Title bar */}
           <div
             className="flex items-center gap-3 px-4 py-2"
             style={{
-              background: "#1a1a1a",
-              borderBottom: "2px solid #2a2a2a",
+              background: colors.titlebar,
+              borderBottom: `2px solid ${colors.titleBorder}`,
+              transition: "background-color 500ms ease, border-color 500ms ease",
             }}
           >
             <span className="inline-block h-3 w-3 rounded-full" style={{ background: "#ff5f57" }} />
@@ -119,7 +158,11 @@ export default function SkillsSection() {
             <span className="inline-block h-3 w-3 rounded-full" style={{ background: "#28c840" }} />
             <span
               className="ml-4 text-xs"
-              style={{ fontFamily: "var(--font-jetbrains)", color: "#555" }}
+              style={{
+                fontFamily: "var(--font-jetbrains)",
+                color: colors.titleText,
+                transition: "color 500ms ease",
+              }}
             >
               zephyrxx0@terminal ~ skills
             </span>
@@ -129,22 +172,25 @@ export default function SkillsSection() {
           <div
             className="p-6"
             style={{
-              background: "#0a0a0a",
+              background: colors.bg,
               fontFamily: "var(--font-jetbrains)",
-              color: "#00ff9d",
+              color: colors.accent,
               fontSize: "0.85rem",
               lineHeight: 1.8,
+              transition: "background-color 500ms ease, color 500ms ease",
             }}
           >
-            <p style={{ color: "#f0f0f0" }}>
+            <p style={{ color: colors.text, transition: "color 500ms ease" }}>
               {"~/zephyrxx0 $ "}
-              <span style={{ color: "#00ff9d" }}>skills --list --verbose</span>
+              <span style={{ color: colors.accent, transition: "color 500ms ease" }}>
+                skills --list --verbose
+              </span>
             </p>
             <br />
 
             {categories.map((cat) => (
               <div key={cat} className="mb-4">
-                <p style={{ color: "#555" }}>[{cat}]</p>
+                <p style={{ color: colors.muted, transition: "color 500ms ease" }}>[{cat}]</p>
                 {SKILLS.filter((s) => s.category === cat).map((skill, i) => (
                   <div
                     key={skill.name}
@@ -154,18 +200,24 @@ export default function SkillsSection() {
                       transition: `opacity 800ms ${i * 80}ms cubic-bezier(0.16, 1, 0.3, 1)`,
                     }}
                   >
-                    <span className="w-32 text-right" style={{ color: "#f0f0f0" }}>
+                    <span
+                      className="w-32 text-right"
+                      style={{ color: colors.text, transition: "color 500ms ease" }}
+                    >
                       {skill.name}
                     </span>
                     <span
                       className="flex-shrink-0"
                       style={{
-                        color: cat === "VIBES" ? "#ff6b9d" : "#00ff9d",
+                        color: cat === "VIBES" ? colors.vibes : colors.accent,
+                        transition: "color 500ms ease",
                       }}
                     >
                       <SkillBar level={skill.level} visible={visible} delay={i * 80} />
                     </span>
-                    <span style={{ color: "#555" }}>{skill.level}%</span>
+                    <span style={{ color: colors.muted, transition: "color 500ms ease" }}>
+                      {skill.level}%
+                    </span>
                   </div>
                 ))}
               </div>
@@ -173,14 +225,22 @@ export default function SkillsSection() {
 
             {/* Joke line */}
             <div className="mt-4">
-              <span style={{ color: "#555" }}>{typingJoke}</span>
-              {!typingComplete && <span className="animate-blink" style={{ color: "#00ff9d" }}>_</span>}
+              <span style={{ color: colors.muted, transition: "color 500ms ease" }}>
+                {typingJoke}
+              </span>
+              {!typingComplete && (
+                <span className="animate-blink" style={{ color: colors.cursor }}>
+                  _
+                </span>
+              )}
             </div>
 
             {/* Blinking cursor */}
             <p className="mt-2">
-              <span style={{ color: "#f0f0f0" }}>{">"}</span>{" "}
-              <span className="animate-blink" style={{ color: "#00ff9d" }}>_</span>
+              <span style={{ color: colors.text, transition: "color 500ms ease" }}>{">"}</span>{" "}
+              <span className="animate-blink" style={{ color: colors.cursor }}>
+                _
+              </span>
             </p>
           </div>
         </div>

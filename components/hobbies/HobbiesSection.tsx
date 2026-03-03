@@ -6,6 +6,7 @@ import BrutalistCard from "../shared/BrutalistCard"
 import { useTheme } from "@/lib/theme"
 
 const SpaceInvadersGame = dynamic(() => import("./SpaceInvadersGame"), { ssr: false })
+const SpotifyNowPlaying = dynamic(() => import("./SpotifyNowPlaying"), { ssr: false })
 
 export default function HobbiesSection() {
   const sectionRef = useRef<HTMLElement>(null)
@@ -221,23 +222,7 @@ function MusicCard({ visible, delay }: { visible: boolean; delay: number }) {
           </h3>
         </div>
 
-        {/* Equalizer bars */}
-        <div className="mb-4 flex items-end gap-2 h-12">
-          {[1, 2, 3, 4, 5].map((n) => (
-            <div
-              key={n}
-              className={`w-3 eq-bar-${n}`}
-              style={{ background: "var(--accent)" }}
-            />
-          ))}
-        </div>
-
-        <p
-          className="italic"
-          style={{ fontFamily: "var(--font-playfair)", color: "var(--muted)" }}
-        >
-          {"\"Lo-fi, OSTs, and anything with a good beat.\""}
-        </p>
+        <SpotifyNowPlaying />
       </BrutalistCard>
     </div>
   )
