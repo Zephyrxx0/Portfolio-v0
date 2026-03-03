@@ -36,6 +36,8 @@ export interface NowPlayingData {
   albumArt?: string
   songUrl?: string
   album?: string
+  progressMs?: number
+  durationMs?: number
 }
 
 export async function getNowPlaying(): Promise<NowPlayingData> {
@@ -65,5 +67,7 @@ export async function getNowPlaying(): Promise<NowPlayingData> {
     albumArt: data.item.album?.images?.[0]?.url,
     songUrl: data.item.external_urls?.spotify,
     album: data.item.album?.name,
+    progressMs: data.progress_ms ?? 0,
+    durationMs: data.item.duration_ms ?? 0,
   }
 }
