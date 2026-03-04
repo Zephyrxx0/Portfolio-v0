@@ -47,6 +47,36 @@ export const projects: Project[] = [
     learned:
       "Working on Weather-Lookup taught me about integrating third-party APIs, handling API keys securely, and displaying dynamic data in a user-friendly way. I also learned about geocoding, unit conversions, and how to handle errors gracefully when the API is unavailable.",
   },
+  {
+    slug: "context",
+    name: "Context",
+    index: "#04",
+    stack: ["JavaScript", "HTML", "CSS"],
+    oneLiner: "A clean and focused contextual note-taking app.",
+    description: "Context is a web-based note taking application built to be fast and distraction-free, letting you organize thoughts directly in the browser.",
+    github: "https://github.com/Zephyrxx0/Context",
+    learned: "Building Context taught me efficient local storage management and state handling using vanilla JavaScript without heavy frameworks.",
+  },
+  {
+    slug: "portfolio-v0",
+    name: "Portfolio-v0",
+    index: "#05",
+    stack: ["HTML", "CSS", "JavaScript"],
+    oneLiner: "The very first version of my developer portfolio.",
+    description: "Portfolio-v0 marks my earliest attempt at building a personal space on the web, focusing on basic semantic HTML styling.",
+    github: "https://github.com/Zephyrxx0/Portfolio-v0",
+    learned: "This foundational project reinforced my core understanding of CSS positioning, flexbox, and semantic HTML.",
+  },
+  {
+    slug: "node-cli",
+    name: "Node-CLI-Tools",
+    index: "#06",
+    stack: ["Node.js", "CLI"],
+    oneLiner: "A collection of helpful command line utilities.",
+    description: "Various CLI scripts built in Node.js to automate repetitive developer tasks such as scaffolding and cleanup.",
+    github: "https://github.com/Zephyrxx0/Node-CLI-Tools",
+    learned: "Working heavily with the file system (fs) module and processing command line arguments in Node.js.",
+  }
 ]
 
 export function getProjectBySlug(slug: string): Project | undefined {
