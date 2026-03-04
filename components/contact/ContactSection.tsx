@@ -54,10 +54,10 @@ export default function ContactSection() {
         setPhase("blackout")
       }, 200)
 
-      // Typewriter "GAME START" after blackout
+      // Typewriter "GAME OVER" after blackout
       setTimeout(() => {
         setPhase("gamestart")
-        const text = "GAME START"
+        const text = "GAME OVER"
         let i = 0
         const interval = setInterval(() => {
           if (i <= text.length) {
@@ -65,9 +65,11 @@ export default function ContactSection() {
             i++
           } else {
             clearInterval(interval)
-            // Transition to reveal after typing
             setTimeout(() => {
-              setPhase("reveal")
+              window.scrollTo({ top: 0, behavior: "smooth" })
+              setPhase("idle")
+              setCredits(0)
+              setTypedGameStart("")
             }, 600)
           }
         }, 120)

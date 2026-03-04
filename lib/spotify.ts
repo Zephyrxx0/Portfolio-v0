@@ -46,6 +46,7 @@ export async function getNowPlaying(): Promise<NowPlayingData> {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
+    cache: "no-store",
   })
 
   if (response.status === 204 || response.status > 400) {

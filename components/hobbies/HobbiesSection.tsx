@@ -5,7 +5,7 @@ import dynamic from "next/dynamic"
 import BrutalistCard from "../shared/BrutalistCard"
 import { useTheme } from "@/lib/theme"
 
-const SpaceInvadersGame = dynamic(() => import("./SpaceInvadersGame"), { ssr: false })
+const AsteroidGame = dynamic(() => import("./AsteroidGame"), { ssr: false })
 const SpotifyNowPlaying = dynamic(() => import("./SpotifyNowPlaying"), { ssr: false })
 
 export default function HobbiesSection() {
@@ -134,27 +134,32 @@ function CodingCard({ visible, delay }: { visible: boolean; delay: number }) {
 }
 
 function GamingCard({ visible, delay, accent }: { visible: boolean; delay: number; accent: string }) {
-  const [clicks, setClicks] = useState(0)
+  const [clicks, setClicks] = useState(5)
   const [showGame, setShowGame] = useState(false)
+  const [hovered, setHovered] = useState(false)
 
   const handleClick = () => {
-    const next = clicks + 1
-    setClicks(next)
-    if (next >= 5) {
-      setShowGame(true)
-      setClicks(0)
+    if (clicks > 0) {
+      const next = clicks - 1
+      setClicks(next)
+      if (next === 0) {
+        setShowGame(true)
+        setTimeout(() => setClicks(5), 1000)
+      }
     }
   }
 
   return (
     <>
       <div
-        className="hover-speed"
+        className="hover-speed relative"
         style={{
           opacity: visible ? 1 : 0,
           transform: visible ? "translateY(0)" : "translateY(40px)",
           transition: `all 600ms cubic-bezier(0.34, 1.56, 0.64, 1) ${delay}ms`,
         }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
       >
         <BrutalistCard className="relative h-full overflow-hidden" onClick={handleClick}>
           <div className="flex items-center gap-3 mb-4">
@@ -184,19 +189,27 @@ function GamingCard({ visible, delay, accent }: { visible: boolean; delay: numbe
             className="italic"
             style={{ fontFamily: "var(--font-playfair)", color: "var(--muted)" }}
           >
-            {"\"From retro to modern — gaming is life.\""}
+            {"\"From retro to modern \u2014 gaming is life.\""}
           </p>
-          <p
-            className="mt-2 text-[8px]"
-            style={{ fontFamily: "var(--font-press-start)", color: "var(--muted)" }}
+
+          <div
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 pointer-events-none transition-all duration-300"
+            style={{
+              background: "var(--text)",
+              color: "var(--bg)",
+              fontFamily: "var(--font-jetbrains)",
+              fontSize: "10px",
+              opacity: hovered && clicks > 0 ? 1 : 0,
+              transform: hovered && clicks > 0 ? "translate(-50%, 0)" : "translate(-50%, 10px)"
+            }}
           >
-            {"CLICK 5x FOR A SURPRISE"}
-          </p>
+            {clicks} left...
+          </div>
         </BrutalistCard>
       </div>
 
       {showGame && (
-        <SpaceInvadersGame
+        <AsteroidGame
           onClose={() => setShowGame(false)}
           accentColor={accent}
         />

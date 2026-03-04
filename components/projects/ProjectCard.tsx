@@ -5,31 +5,54 @@ import Link from "next/link"
 import type { Project } from "@/lib/projects"
 import BrutalistCard from "../shared/BrutalistCard"
 
-// Pixel icons for projects
 const PIXEL_ICONS: Record<string, number[][]> = {
   bot: [
-    [0,1,1,1,1,0],
-    [1,0,1,1,0,1],
-    [1,1,1,1,1,1],
-    [1,0,0,0,0,1],
-    [0,1,1,1,1,0],
-    [0,0,1,1,0,0],
+    [0, 1, 1, 1, 1, 0],
+    [1, 0, 1, 1, 0, 1],
+    [1, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 0, 1],
+    [0, 1, 1, 1, 1, 0],
+    [0, 0, 1, 1, 0, 0],
   ],
   test: [
-    [1,1,1,1,1,1],
-    [1,0,0,0,0,1],
-    [1,0,1,0,0,1],
-    [1,0,0,0,0,1],
-    [1,0,0,1,0,1],
-    [1,1,1,1,1,1],
+    [1, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 0, 1],
+    [1, 0, 1, 0, 0, 1],
+    [1, 0, 0, 0, 0, 1],
+    [1, 0, 0, 1, 0, 1],
+    [1, 1, 1, 1, 1, 1],
   ],
   weather: [
-    [0,0,1,1,0,0],
-    [0,1,1,1,1,0],
-    [1,1,1,1,1,1],
-    [0,1,1,1,1,0],
-    [0,0,0,0,1,0],
-    [0,0,1,0,0,0],
+    [0, 0, 1, 1, 0, 0],
+    [0, 1, 1, 1, 1, 0],
+    [1, 1, 1, 1, 1, 1],
+    [0, 1, 1, 1, 1, 0],
+    [0, 0, 0, 0, 1, 0],
+    [0, 0, 1, 0, 0, 0],
+  ],
+  app: [
+    [1, 1, 1, 1, 1, 1],
+    [1, 0, 1, 1, 0, 1],
+    [1, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 0, 1],
+    [1, 1, 1, 1, 1, 1],
+    [0, 1, 1, 1, 1, 0],
+  ],
+  cmd: [
+    [1, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 0, 1],
+    [1, 0, 1, 0, 0, 1],
+    [1, 0, 0, 1, 0, 1],
+    [1, 0, 0, 0, 1, 1],
+    [1, 1, 1, 1, 1, 1],
+  ],
+  web: [
+    [0, 1, 1, 1, 1, 0],
+    [1, 0, 0, 0, 0, 1],
+    [1, 0, 1, 1, 0, 1],
+    [1, 0, 1, 1, 0, 1],
+    [1, 0, 0, 0, 0, 1],
+    [0, 1, 1, 1, 1, 0],
   ],
 }
 
@@ -37,6 +60,9 @@ const ICON_MAP: Record<string, string> = {
   memebot: "bot",
   "flexi-test": "test",
   "weather-lookup": "weather",
+  "context": "app",
+  "portfolio-v0": "web",
+  "node-cli": "cmd",
 }
 
 interface ProjectCardProps {
@@ -66,7 +92,13 @@ export default function ProjectCard({ project, onEasterEgg }: ProjectCardProps) 
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <BrutalistCard className="relative h-full">
+      <BrutalistCard
+        className="relative h-full transition-colors duration-300"
+        style={{
+          background: hovered ? "var(--text)" : "var(--bg2)",
+          color: hovered ? "var(--bg)" : "var(--text)",
+        }}
+      >
         {/* Top row */}
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -81,14 +113,15 @@ export default function ProjectCard({ project, onEasterEgg }: ProjectCardProps) 
                       y={y * 4}
                       width="4"
                       height="4"
-                      fill="var(--accent)"
+                      fill={hovered ? "var(--bg)" : "var(--accent)"}
+                      className="transition-colors duration-300"
                     />
                   ) : null
                 )
               )}
             </svg>
 
-            <h3 className="font-sans text-lg font-bold" style={{ color: "var(--text)" }}>
+            <h3 className="font-sans text-lg font-bold" style={{ color: hovered ? "var(--bg)" : "var(--text)" }}>
               {project.name}
             </h3>
           </div>
@@ -98,7 +131,7 @@ export default function ProjectCard({ project, onEasterEgg }: ProjectCardProps) 
             onClick={handleBadgeClick}
             className="font-mono text-sm font-bold"
             style={{
-              color: "var(--muted)",
+              color: hovered ? "var(--bg)" : "var(--muted)",
               fontFamily: "var(--font-jetbrains)",
             }}
           >
@@ -108,8 +141,8 @@ export default function ProjectCard({ project, onEasterEgg }: ProjectCardProps) 
 
         {/* Separator */}
         <div
-          className="my-3"
-          style={{ borderTop: "2px solid var(--border)" }}
+          className="my-3 transition-colors duration-300"
+          style={{ borderTop: `2px solid ${hovered ? "var(--bg)" : "var(--border)"}` }}
         />
 
         {/* Description */}
@@ -117,7 +150,7 @@ export default function ProjectCard({ project, onEasterEgg }: ProjectCardProps) 
           className="mb-4"
           style={{
             fontFamily: "var(--font-playfair)",
-            color: "var(--text)",
+            color: hovered ? "var(--bg)" : "var(--text)",
             fontSize: "1rem",
             lineHeight: 1.6,
           }}
@@ -130,11 +163,11 @@ export default function ProjectCard({ project, onEasterEgg }: ProjectCardProps) 
           {project.stack.map((tech) => (
             <span
               key={tech}
-              className="px-2 py-0.5 text-xs font-bold"
+              className="px-2 py-0.5 text-xs font-bold transition-colors duration-300"
               style={{
                 fontFamily: "var(--font-jetbrains)",
-                border: "2px solid var(--border)",
-                color: "var(--accent)",
+                border: `2px solid ${hovered ? "var(--bg)" : "var(--border)"}`,
+                color: hovered ? "var(--bg)" : "var(--accent)",
               }}
             >
               {tech.toLowerCase()}
@@ -146,8 +179,8 @@ export default function ProjectCard({ project, onEasterEgg }: ProjectCardProps) 
         <div className="flex justify-end">
           <Link
             href={`/projects/${project.slug}`}
-            className="font-sans text-sm font-bold tracking-wide transition-colors"
-            style={{ color: "var(--accent)" }}
+            className="font-sans text-sm font-bold tracking-wide transition-colors duration-300"
+            style={{ color: hovered ? "var(--bg)" : "var(--accent)" }}
           >
             {"VIEW PROJECT \u2192"}
           </Link>
@@ -164,14 +197,14 @@ export default function ProjectCard({ project, onEasterEgg }: ProjectCardProps) 
             }}
           >
             <svg width="16" height="16" viewBox="0 0 16 16">
-              <rect x="6" y="0" width="4" height="4" fill="var(--accent)" />
-              <rect x="2" y="4" width="4" height="4" fill="var(--accent)" />
-              <rect x="6" y="4" width="4" height="4" fill="var(--accent)" />
-              <rect x="10" y="4" width="4" height="4" fill="var(--accent)" />
-              <rect x="0" y="8" width="4" height="4" fill="var(--accent)" />
-              <rect x="6" y="8" width="4" height="4" fill="var(--accent)" />
-              <rect x="12" y="8" width="4" height="4" fill="var(--accent)" />
-              <rect x="6" y="12" width="4" height="4" fill="var(--accent)" />
+              <rect x="6" y="0" width="4" height="4" fill="var(--bg)" />
+              <rect x="2" y="4" width="4" height="4" fill="var(--bg)" />
+              <rect x="6" y="4" width="4" height="4" fill="var(--bg)" />
+              <rect x="10" y="4" width="4" height="4" fill="var(--bg)" />
+              <rect x="0" y="8" width="4" height="4" fill="var(--bg)" />
+              <rect x="6" y="8" width="4" height="4" fill="var(--bg)" />
+              <rect x="12" y="8" width="4" height="4" fill="var(--bg)" />
+              <rect x="6" y="12" width="4" height="4" fill="var(--bg)" />
             </svg>
           </div>
         )}
