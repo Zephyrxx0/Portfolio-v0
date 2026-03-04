@@ -207,7 +207,7 @@ export default function IsometricTerrain() {
 
       // Isometric-style orthographic camera
       const aspect = window.innerWidth / window.innerHeight
-      const frustum = 26 // slightly larger to fit fragmented islands
+      const frustum = 30 // expanded to fit surrounding floating islands
       const camera = new THREE.OrthographicCamera(
         -frustum * aspect / 2, frustum * aspect / 2,
         frustum / 2, -frustum / 2,
@@ -260,9 +260,13 @@ export default function IsometricTerrain() {
       scene.add(sunLight)
 
       if (isDark) {
-        const fireLight = new THREE.PointLight(0xff4400, 2, 20)
+        const fireLight = new THREE.PointLight(0xff4400, 2.5, 30)
         fireLight.position.set(0, 0, 0)
         scene.add(fireLight)
+
+        const portalLight = new THREE.PointLight(0xaa00ff, 3, 20)
+        portalLight.position.set(-6, 4, 3)
+        scene.add(portalLight)
       }
 
       // World group
@@ -275,6 +279,9 @@ export default function IsometricTerrain() {
         const tex = loader.load(path)
         tex.magFilter = THREE.NearestFilter
         tex.minFilter = THREE.NearestFilter
+        // Wrap for larger repeating surfaces
+        tex.wrapS = THREE.RepeatWrapping
+        tex.wrapT = THREE.RepeatWrapping
         return tex
       }
 
@@ -290,6 +297,19 @@ export default function IsometricTerrain() {
         netherrack: loadTex('/assets/nether/netherrack.png'),
         lava: loadTex('/assets/nether/lava_flow.png'),
         obsidian: loadTex('/assets/nether/obsidian.png'),
+        path: loadTex('/assets/overworld/dirt_path_top.png'),
+        chest: loadTex('/assets/overworld/chest_normal.png'),
+        craftingFront: loadTex('/assets/overworld/crafting_table_front.png'),
+        craftingSide: loadTex('/assets/overworld/crafting_table_side.png'),
+        craftingTop: loadTex('/assets/overworld/crafting_table_top.png'),
+        orchid: loadTex('/assets/overworld/blue_orchid.png'),
+        poppy: loadTex('/assets/overworld/poppy.png'),
+        rose: loadTex('/assets/overworld/rose_bush_top.png'),
+        gravel: loadTex('/assets/overworld/gravel.png'),
+        sand: loadTex('/assets/overworld/sand.png'),
+        goldOre: loadTex('/assets/overworld/gold_ore.png'),
+        ironOre: loadTex('/assets/overworld/iron_ore.png'),
+        fire: loadTex('/assets/nether/fire_0.png'),
       }
 
       // ── Sun sprite (Overworld only) ──
@@ -303,10 +323,12 @@ export default function IsometricTerrain() {
       }
 
       // Toned down greens
-      const grassColor = 0x76a056
-      const leavesColor = 0x4a7337
+      const grassColor = 0x8ab66a // Less intense, more natural green
+      const leavesColor = 0x5a8347
+      const birchLeavesColor = 0x7eb048
+      const autumnLeavesColor = 0xd97c27
 
-      // Materials
+      // Materials map definition
       const materials: Record<string, THREE.Material | THREE.Material[]> = {
         dirt: new THREE.MeshLambertMaterial({ map: tex.dirt }),
         grass: [
@@ -317,9 +339,19 @@ export default function IsometricTerrain() {
           new THREE.MeshLambertMaterial({ map: tex.grassSide }),
           new THREE.MeshLambertMaterial({ map: tex.grassSide }),
         ],
-        // water bluer and more opaque
-        water: new THREE.MeshLambertMaterial({ map: tex.water, color: 0x4488ff, transparent: true, opacity: 0.95 }),
-        log: [
+        path: [
+          new THREE.MeshLambertMaterial({ map: tex.dirt }),
+          new THREE.MeshLambertMaterial({ map: tex.dirt }),
+          new THREE.MeshLambertMaterial({ map: tex.path }),
+          new THREE.MeshLambertMaterial({ map: tex.dirt }),
+          new THREE.MeshLambertMaterial({ map: tex.dirt }),
+          new THREE.MeshLambertMaterial({ map: tex.dirt }),
+        ],
+        gravel: new THREE.MeshLambertMaterial({ map: tex.gravel }),
+        sand: new THREE.MeshLambertMaterial({ map: tex.sand }),
+        // Water is bluer and opaque
+        water: new THREE.MeshLambertMaterial({ map: tex.water, color: 0x3377ff, transparent: true, opacity: 0.95 }),
+        wood_log: [
           new THREE.MeshLambertMaterial({ map: tex.logSide }),
           new THREE.MeshLambertMaterial({ map: tex.logSide }),
           new THREE.MeshLambertMaterial({ map: tex.logTop }),
@@ -327,24 +359,52 @@ export default function IsometricTerrain() {
           new THREE.MeshLambertMaterial({ map: tex.logSide }),
           new THREE.MeshLambertMaterial({ map: tex.logSide }),
         ],
-        leaves: new THREE.MeshLambertMaterial({ map: tex.leaves, color: leavesColor, transparent: true, opacity: 0.9, alphaTest: 0.1 }),
+        birch_log: [
+          new THREE.MeshLambertMaterial({ map: tex.logSide, color: 0xdddddd }),
+          new THREE.MeshLambertMaterial({ map: tex.logSide, color: 0xdddddd }),
+          new THREE.MeshLambertMaterial({ map: tex.logTop, color: 0xeaeaea }),
+          new THREE.MeshLambertMaterial({ map: tex.logTop, color: 0xeaeaea }),
+          new THREE.MeshLambertMaterial({ map: tex.logSide, color: 0xdddddd }),
+          new THREE.MeshLambertMaterial({ map: tex.logSide, color: 0xdddddd }),
+        ],
+        oak_leaves: new THREE.MeshLambertMaterial({ map: tex.leaves, color: leavesColor, transparent: true, opacity: 0.9, alphaTest: 0.1 }),
+        birch_leaves: new THREE.MeshLambertMaterial({ map: tex.leaves, color: birchLeavesColor, transparent: true, opacity: 0.9, alphaTest: 0.1 }),
+        autumn_leaves: new THREE.MeshLambertMaterial({ map: tex.leaves, color: autumnLeavesColor, transparent: true, opacity: 0.9, alphaTest: 0.1 }),
+
+        // Custom Blocks
+        crafting: [
+          new THREE.MeshLambertMaterial({ map: tex.craftingSide }),
+          new THREE.MeshLambertMaterial({ map: tex.craftingSide }),
+          new THREE.MeshLambertMaterial({ map: tex.craftingTop }),
+          new THREE.MeshLambertMaterial({ map: tex.dirt }),
+          new THREE.MeshLambertMaterial({ map: tex.craftingFront }),
+          new THREE.MeshLambertMaterial({ map: tex.craftingFront }),
+        ],
+        chest: new THREE.MeshLambertMaterial({ map: tex.chest }),
+        gold_ore: new THREE.MeshLambertMaterial({ map: tex.goldOre }),
+        iron_ore: new THREE.MeshLambertMaterial({ map: tex.ironOre }),
+
+        // Flora (Sprites mapped to faces)
+        orchid: new THREE.MeshLambertMaterial({ map: tex.orchid, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide }),
+        poppy: new THREE.MeshLambertMaterial({ map: tex.poppy, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide }),
+        rose: new THREE.MeshLambertMaterial({ map: tex.rose, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide }),
+        dandelion: new THREE.MeshLambertMaterial({ map: tex.sun, color: 0xffff00, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide }), // re-used tex
+
+        // Nether
         netherrack: new THREE.MeshLambertMaterial({ map: tex.netherrack }),
+        crimson_nylium: new THREE.MeshLambertMaterial({ map: tex.netherrack, color: 0xb53535 }),
+        warped_nylium: new THREE.MeshLambertMaterial({ map: tex.netherrack, color: 0x16827a }),
+        soul_sand: new THREE.MeshLambertMaterial({ map: tex.dirt, color: 0x6e5241 }),
+        basalt: new THREE.MeshLambertMaterial({ map: tex.logSide, color: 0x515151 }),
+        glowstone: new THREE.MeshLambertMaterial({ map: tex.sand, color: 0xffddaa, emissive: 0xcca133, emissiveIntensity: 0.8 }),
         obsidian: new THREE.MeshLambertMaterial({ map: tex.obsidian }),
-        lava: new THREE.MeshLambertMaterial({ map: tex.lava, emissive: 0xff3300, emissiveIntensity: 0.8 }),
-        crimson_nylium: new THREE.MeshLambertMaterial({ color: 0xbd3030 }),
-        warped_nylium: new THREE.MeshLambertMaterial({ color: 0x167e86 }),
-        basalt: new THREE.MeshLambertMaterial({ color: 0x4a4a50 }),
-        soul_sand: new THREE.MeshLambertMaterial({ color: 0x5e483e }),
-        glowstone: new THREE.MeshLambertMaterial({ color: 0xffe699, emissive: 0xcc8800, emissiveIntensity: 0.6 }),
-        portal: new THREE.MeshLambertMaterial({ color: 0x9900ff, emissive: 0x5500cc, transparent: true, opacity: 0.85 }),
-        crimson_stem: new THREE.MeshLambertMaterial({ color: 0x3d1b27 }),
-        nether_wart: new THREE.MeshLambertMaterial({ color: 0x8a0000 }),
-        warped_stem: new THREE.MeshLambertMaterial({ color: 0x2b6a68 }),
-        warped_wart: new THREE.MeshLambertMaterial({ color: 0x14b4a6 }),
+        lava: new THREE.MeshLambertMaterial({ map: tex.lava, emissive: 0xff4400, emissiveIntensity: 0.8 }),
+        fire: new THREE.MeshBasicMaterial({ map: tex.fire, color: 0xffaa00, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide }),
+        portal: new THREE.MeshBasicMaterial({ color: 0xaa00ff, transparent: true, opacity: 0.7, side: THREE.DoubleSide }),
       }
 
       const blockGeo = new THREE.BoxGeometry(1, 1, 1)
-      const gridSize = 32 // larger grid to allow for islands around the main land
+      const gridSize = 36 // Increased grid to allow more organic shapes and small outer fragments
       const offset = gridSize / 2
 
       const heights: number[][] = []
@@ -353,6 +413,7 @@ export default function IsometricTerrain() {
       // Outline meshes array
       const terrainMeshes: THREE.Object3D[] = []
 
+      // Terrain Generation
       for (let z = 0; z < gridSize; z++) {
         heights[z] = []
         blockTypes[z] = []
@@ -368,18 +429,23 @@ export default function IsometricTerrain() {
           // Normalized distance from center (0 = center, 1 = edge of grid)
           const normDist = dist / offset
 
-          // Edge dithering / fragmentation
-          const noiseValue = fbm(nx * 10, nz * 10, 3)
-          const ditherThreshold = 0.35 + (normDist * 0.75) // requires higher noise value to exist if further out
+          const noiseValue = fbm(nx * 8, nz * 8, 3)
+          const ditherThreshold = 0.3 + (normDist * 0.7)
 
-          // Base island radius
           const mainIslandRadius = 0.55
 
           let skip = false
           if (normDist > mainIslandRadius) {
-            // Outside main island: fragmented islands
-            if (noiseValue < ditherThreshold) {
-              skip = true
+            if (isDark) {
+              // Nether breaks apart smoothly into void
+              if (noiseValue < ditherThreshold) skip = true
+            } else {
+              // Overworld has solid main island and distinct tiny floating sub-islands
+              if (noiseValue > 0.8 && normDist < 0.85) {
+                skip = false // tiny floating island
+              } else {
+                skip = true
+              }
             }
           }
 
@@ -389,62 +455,64 @@ export default function IsometricTerrain() {
             continue
           }
 
-          let h: number
+          let h: number = 2
 
           if (isDark) {
             // Nether
             const centerDist = dist / (offset * mainIslandRadius)
-
-            // Biome noise
-            const biomeNoise = fbm(nx * 4, nz * 4, 2)
-            const isSoulSand = biomeNoise < 0.2
-            const isBasalt = biomeNoise > 0.8
-            const isCrimson = fbm(nx * 6, nz * 6, 2) > 0.6
-            const isWarped = fbm(nx * 6 + 10, nz * 6 + 10, 2) > 0.6
-
-            if (centerDist < 0.3) {
-              // Central lava lake, varied depth
-              h = 1 + fbm(nx * 8, nz * 8, 2) * 0.5
+            if (centerDist < 0.35) {
+              // Central lava lake
+              h = 1
               blockTypes[z][x] = "lava"
             } else {
               // Surrounding land
               const noiseH = fbm(nx * 4, nz * 4, 3) * 3
               h = 1 + noiseH + (centerDist * 1.5)
 
-              if (h > 3.5 && Math.random() > 0.6) {
-                blockTypes[z][x] = "obsidian"
-              } else if (isBasalt) {
-                blockTypes[z][x] = "basalt"
-              } else if (isSoulSand) {
-                blockTypes[z][x] = "soul_sand"
-              } else if (isCrimson) {
-                blockTypes[z][x] = "crimson_nylium"
-              } else if (isWarped) {
+              const biomeNoise = fbm(nx * 5, nz * 5, 2)
+              if (biomeNoise < 0.35) {
                 blockTypes[z][x] = "warped_nylium"
+              } else if (biomeNoise > 0.65) {
+                blockTypes[z][x] = "crimson_nylium"
+              } else if (Math.random() > 0.9) {
+                blockTypes[z][x] = "soul_sand"
               } else {
                 blockTypes[z][x] = "netherrack"
+              }
+
+              if (h > 3.0 && Math.random() > 0.6) {
+                blockTypes[z][x] = "obsidian"
               }
             }
           } else {
             // Overworld
             const xRatio = x / gridSize
-            const riverCenter = 0.5
-            const riverWidth = 0.08
-            // Add some meandering to the river
-            const meander = fbm(nz * 2, 0, 2) * 0.15
+            const riverCenter = 0.45
+            const riverWidth = 0.1
+            const meander = fbm(nz * 2, 0, 2) * 0.2
             const riverDist = Math.abs(xRatio - riverCenter + meander)
+
+            // Winding Path
+            const pathCenter = 0.7
+            const pathMeander = fbm(nz * 3 + 10, nx * 3, 2) * 0.15
+            const pathDist = Math.abs(xRatio - pathCenter + pathMeander)
 
             if (riverDist < riverWidth && normDist < mainIslandRadius * 0.9) {
               h = 1
               blockTypes[z][x] = "water"
-            } else if (xRatio < 0.45) {
-              // Hills
-              h = 2 + fbm(nx * 4, nz * 4, 3) * 2.5
-              blockTypes[z][x] = "grass"
+            } else if (pathDist < 0.05 && normDist < mainIslandRadius) {
+              h = 2 + fbm(nx * 3, nz * 3, 2) * 0.5
+              blockTypes[z][x] = "path"
             } else {
-              // Plains
-              h = 1.5 + fbm(nx * 3, nz * 3, 2) * 1.0
-              blockTypes[z][x] = "grass"
+              h = 2 + fbm(nx * 4, nz * 4, 3) * 2.5
+
+              if (h < 2.2 && riverDist < riverWidth + 0.04) {
+                blockTypes[z][x] = "sand"
+              } else if (Math.random() > 0.97) {
+                blockTypes[z][x] = (Math.random() > 0.5) ? "gold_ore" : "iron_ore"
+              } else {
+                blockTypes[z][x] = "grass"
+              }
             }
           }
 
@@ -471,32 +539,23 @@ export default function IsometricTerrain() {
             let mat: THREE.Material | THREE.Material[]
 
             if (y === stackHeight) {
-              if (type === "water") mat = materials.water
-              else if (type === "lava") mat = materials.lava
-              else if (type === "grass") mat = materials.grass
-              else if (type === "netherrack") mat = materials.netherrack
-              else if (type === "obsidian") mat = materials.obsidian
-              else if (type === "crimson_nylium") mat = materials.crimson_nylium
-              else if (type === "warped_nylium") mat = materials.warped_nylium
-              else if (type === "basalt") mat = materials.basalt
-              else if (type === "soul_sand") mat = materials.soul_sand
-              else mat = materials.dirt
+              mat = materials[type] || materials.dirt
             } else {
               if (isDark) {
-                if (type === "obsidian") mat = materials.obsidian
-                else if (type === "basalt") mat = materials.basalt
+                if (type === "obsidian" || type === "basalt") mat = materials[type]
                 else mat = materials.netherrack
               } else {
-                mat = materials.dirt
+                if (type === "sand" || type === "gold_ore" || type === "iron_ore") mat = materials.dirt
+                else mat = materials.dirt
               }
             }
 
             let isVisible = y === stackHeight || x === 0 || x === gridSize - 1 || z === 0 || z === gridSize - 1
             if (!isVisible) {
-              const xMinus = heights[z][x - 1]
-              const xPlus = heights[z][x + 1]
-              const zMinus = heights[z - 1][x]
-              const zPlus = heights[z + 1][x]
+              const xMinus = heights[z][x - 1] || -99
+              const xPlus = heights[z][x + 1] || -99
+              const zMinus = heights[z - 1]?.[x] || -99
+              const zPlus = heights[z + 1]?.[x] || -99
               if (y > xMinus || y > xPlus || y > zMinus || y > zPlus) {
                 isVisible = true
               }
@@ -515,142 +574,133 @@ export default function IsometricTerrain() {
         }
       }
 
-      outlinePass.selectedObjects = terrainMeshes
+      // Add special Objects to terrain array
+      const addDeco = (geo: THREE.BufferGeometry, mat: THREE.Material | THREE.Material[], px: number, py: number, pz: number, isTerrain = false) => {
+        const mesh = new THREE.Mesh(geo, mat)
+        mesh.position.set(px, py, pz)
+        mesh.castShadow = true
+        mesh.receiveShadow = true
+        world.add(mesh)
+        allMeshes.push(mesh)
+        if (isTerrain) terrainMeshes.push(mesh)
+        return mesh
+      }
 
-      // ── Trees (Overworld) ──
+      const buildTree = (tx: number, tz: number, surfaceY: number, logMat: THREE.Material[], leafMat: THREE.Material) => {
+        const th = 3 + Math.floor(Math.random() * 2)
+        for (let ty = 1; ty <= th; ty++) {
+          addDeco(blockGeo, logMat, tx - offset + 0.5, surfaceY - 3 + ty, tz - offset + 0.5, true)
+        }
+        for (let ox = -1; ox <= 1; ox++) {
+          for (let oz = -1; oz <= 1; oz++) {
+            if (ox === 0 && oz === 0) continue
+            if (Math.random() > 0.8 && Math.abs(ox) + Math.abs(oz) === 2) continue // round corners
+            addDeco(blockGeo, leafMat, tx + ox - offset + 0.5, surfaceY - 3 + th, tz + oz - offset + 0.5, true)
+          }
+        }
+        addDeco(blockGeo, leafMat, tx - offset + 0.5, surfaceY - 3 + th + 1, tz - offset + 0.5, true)
+      }
+
+      const flowerGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5) // A small box for plant representation
+
       if (!isDark) {
-        for (let attempt = 0; attempt < 15; attempt++) {
+        let placedCrafting = false
+        let placedChest = false
+
+        for (let attempt = 0; attempt < 150; attempt++) {
           const tx = Math.floor(Math.random() * (gridSize - 4)) + 2
           const tz = Math.floor(Math.random() * (gridSize - 4)) + 2
-          if (blockTypes[tz][tx] !== "grass") continue
+          if (blockTypes[tz][tx] !== "grass" && blockTypes[tz][tx] !== "path") continue
 
           const surfaceY = heights[tz][tx]
 
-          // Trunk
-          for (let ty = 1; ty <= 3; ty++) {
-            const trunk = new THREE.Mesh(blockGeo, materials.log)
-            trunk.position.set(tx - offset + 0.5, surfaceY - 3 + ty, tz - offset + 0.5)
-            trunk.castShadow = true
-            trunk.receiveShadow = true
-            world.add(trunk)
-            allMeshes.push(trunk)
-            terrainMeshes.push(trunk)
+          if (!placedCrafting && blockTypes[tz][tx] === "grass") {
+            addDeco(blockGeo, materials.crafting, tx - offset + 0.5, surfaceY - 2, tz - offset + 0.5, true)
+            placedCrafting = true
+            continue
+          }
+          if (!placedChest && blockTypes[tz][tx] === "grass") {
+            addDeco(blockGeo, materials.chest, tx - offset + 0.5, surfaceY - 2, tz - offset + 0.5, true)
+            placedChest = true
+            continue
           }
 
-          // Leaves
-          const leafCenters = [
-            [tx, surfaceY + 3, tz],
-            [tx + 1, surfaceY + 3, tz], [tx - 1, surfaceY + 3, tz],
-            [tx, surfaceY + 3, tz + 1], [tx, surfaceY + 3, tz - 1],
-            [tx, surfaceY + 4, tz],
-          ]
-          leafCenters.forEach(([lx, ly, lz]) => {
-            const leaf = new THREE.Mesh(blockGeo, materials.leaves)
-            leaf.position.set(lx - offset + 0.5, ly - 3, lz - offset + 0.5)
-            leaf.castShadow = true
-            leaf.receiveShadow = true
-            world.add(leaf)
-            allMeshes.push(leaf)
-            terrainMeshes.push(leaf)
-          })
-        }
-      }
-
-      // ── Nether Biome Features ──
-      let hasPortal = false
-      if (isDark) {
-        // Nether Portal
-        const portalGroup = new THREE.Group()
-        for (let py = 0; py < 5; py++) {
-          for (let px = 0; px < 4; px++) {
-            if (py === 0 || py === 4 || px === 0 || px === 3) {
-              const b = new THREE.Mesh(blockGeo, materials.obsidian)
-              b.position.set(px, py, 0)
-              portalGroup.add(b)
-            } else {
-              const p = new THREE.Mesh(blockGeo, materials.portal)
-              p.position.set(px, py, 0)
-              portalGroup.add(p)
-            }
-          }
-        }
-
-        // Find a good spot for the portal near the base
-        const pz = Math.floor(gridSize * 0.75)
-        const px = Math.floor(gridSize * 0.75)
-        const ph = Math.max(1, heights[pz]?.[px] || 1)
-        portalGroup.position.set(px - offset, ph - 2.5, pz - offset)
-        portalGroup.rotation.y = -Math.PI / 4 // Angle it slightly towards the camera
-        world.add(portalGroup)
-        hasPortal = true
-
-        // Distribute trees and features
-        for (let z = 2; z < gridSize - 2; z++) {
-          for (let x = 2; x < gridSize - 2; x++) {
-            const type = blockTypes[z][x]
-            const h = heights[z][x]
-            if (h <= 0 || type === "skip" || type === "lava") continue
-
+          if (Math.random() < 0.15 && blockTypes[tz][tx] === "grass") {
             const r = Math.random()
+            if (r < 0.5) buildTree(tx, tz, surfaceY, materials.wood_log as THREE.Material[], materials.oak_leaves as THREE.Material)
+            else if (r < 0.8) buildTree(tx, tz, surfaceY, materials.birch_log as THREE.Material[], materials.birch_leaves as THREE.Material)
+            else buildTree(tx, tz, surfaceY, materials.wood_log as THREE.Material[], materials.autumn_leaves as THREE.Material)
+          } else if (Math.random() < 0.4 && blockTypes[tz][tx] === "grass") {
+            // Flowers / Tall Grass
+            const r = Math.random()
+            let fmat = materials.rose
+            if (r < 0.25) fmat = materials.orchid
+            else if (r < 0.5) fmat = materials.poppy
+            else if (r < 0.75) fmat = materials.dandelion
 
-            // Crimson Trees
-            if (type === "crimson_nylium" && r < 0.15) {
-              const th = Math.floor(Math.random() * 3) + 3
+            addDeco(flowerGeo, fmat, tx - offset + 0.5 + (Math.random() - 0.5) * 0.5, surfaceY - 2.75, tz - offset + 0.5 + (Math.random() - 0.5) * 0.5, true)
+          }
+        }
+      }
+
+      if (isDark) {
+        // Nether features: Basalt pillars, Trees, Glowstone, Fire
+        for (let attempt = 0; attempt < 80; attempt++) {
+          const tx = Math.floor(Math.random() * (gridSize - 4)) + 2
+          const tz = Math.floor(Math.random() * (gridSize - 4)) + 2
+          const type = blockTypes[tz][tx]
+          if (type === "skip" || type === "lava") continue
+          const h = heights[tz][tx]
+
+          if (type === "warped_nylium" || type === "crimson_nylium") {
+            if (Math.random() < 0.2) {
+              // Fungi Tree
+              const logMat = type === "warped_nylium" ? materials.warped_nylium : materials.crimson_nylium
+              const leafMat = type === "warped_nylium" ? materials.warped_nylium : materials.crimson_nylium // using same color for blocky vibe
+              const th = 2 + Math.floor(Math.random() * 2)
               for (let ty = 1; ty <= th; ty++) {
-                const trunk = new THREE.Mesh(blockGeo, materials.crimson_stem)
-                trunk.position.set(x - offset + 0.5, h - 3 + ty, z - offset + 0.5)
-                world.add(trunk)
-                allMeshes.push(trunk)
+                addDeco(blockGeo, logMat, tx - offset + 0.5, h - 3 + ty, tz - offset + 0.5, true)
               }
-              for (let wx = -1; wx <= 1; wx++) {
-                for (let wz = -1; wz <= 1; wz++) {
-                  if (Math.abs(wx) === 1 && Math.abs(wz) === 1 && Math.random() > 0.5) continue;
-                  const leaves = new THREE.Mesh(blockGeo, materials.nether_wart)
-                  leaves.position.set(x - offset + 0.5 + wx, h - 3 + th, z - offset + 0.5 + wz)
-                  world.add(leaves)
-                  allMeshes.push(leaves)
+              // cap
+              for (let ox = -1; ox <= 1; ox++) {
+                for (let oz = -1; oz <= 1; oz++) {
+                  if (ox === 0 && oz === 0) continue
+                  addDeco(blockGeo, leafMat, tx + ox - offset + 0.5, h - 3 + th, tz + oz - offset + 0.5, true)
                 }
               }
-            } else if (type === "warped_nylium" && r < 0.15) {
-              const th = Math.floor(Math.random() * 3) + 3
-              for (let ty = 1; ty <= th; ty++) {
-                const trunk = new THREE.Mesh(blockGeo, materials.warped_stem)
-                trunk.position.set(x - offset + 0.5, h - 3 + ty, z - offset + 0.5)
-                world.add(trunk)
-                allMeshes.push(trunk)
-              }
-              for (let wx = -1; wx <= 1; wx++) {
-                for (let wz = -1; wz <= 1; wz++) {
-                  if (Math.abs(wx) === 1 && Math.abs(wz) === 1 && Math.random() > 0.5) continue;
-                  const leaves = new THREE.Mesh(blockGeo, materials.warped_wart)
-                  leaves.position.set(x - offset + 0.5 + wx, h - 3 + th, z - offset + 0.5 + wz)
-                  world.add(leaves)
-                  allMeshes.push(leaves)
-                }
-              }
-            } else if (type === "basalt" && r < 0.1) {
-              const th = Math.floor(Math.random() * 4) + 2
-              for (let ty = 1; ty <= th; ty++) {
-                const b = new THREE.Mesh(blockGeo, materials.basalt)
-                b.position.set(x - offset + 0.5, h - 3 + ty, z - offset + 0.5)
-                world.add(b)
-                allMeshes.push(b)
-              }
-              if (Math.random() > 0.7) {
-                const lv = new THREE.Mesh(blockGeo, materials.lava)
-                lv.position.set(x - offset + 0.5, h - 3 + th + 1, z - offset + 0.5)
-                world.add(lv)
-                allMeshes.push(lv)
-              }
-            } else if (r < 0.02 && (type === "netherrack" || type === "soul_sand")) {
-              const g1 = new THREE.Mesh(blockGeo, materials.glowstone)
-              g1.position.set(x - offset + 0.5, h - 3 + 1, z - offset + 0.5)
-              world.add(g1)
-              allMeshes.push(g1)
+            } else if (Math.random() < 0.3) {
+              // fire or glowstone scatter
+              if (Math.random() > 0.5) addDeco(flowerGeo, materials.fire, tx - offset + 0.5, h - 2.75, tz - offset + 0.5)
+              else addDeco(blockGeo, materials.glowstone, tx - offset + 0.5, h - 2, tz - offset + 0.5, true)
+            }
+          }
+
+          if (type === "soul_sand" && Math.random() < 0.4) {
+            addDeco(flowerGeo, materials.fire, tx - offset + 0.5, h - 2.75, tz - offset + 0.5) // soul fire visually just fire here
+          }
+
+          if (type === "basalt" && Math.random() < 0.3) {
+            const sh = Math.floor(Math.random() * 4) + 1
+            for (let ty = 1; ty <= sh; ty++) {
+              addDeco(blockGeo, materials.basalt, tx - offset + 0.5, h - 3 + ty, tz - offset + 0.5, true)
+            }
+          }
+        }
+
+        // Nether Portal
+        const px = -6, py = 1, pz = 3
+        for (let pyy = 0; pyy < 5; pyy++) {
+          for (let pxx = 0; pxx < 4; pxx++) {
+            if (pxx === 0 || pxx === 3 || pyy === 0 || pyy === 4) {
+              addDeco(blockGeo, materials.obsidian, px + pxx, py + pyy - 1, pz, true)
+            } else {
+              addDeco(blockGeo, materials.portal, px + pxx, py + pyy - 1, pz)
             }
           }
         }
       }
+
+      outlinePass.selectedObjects = terrainMeshes
 
       // ── Mobs ──
       const mobs: MobDef[] = []
@@ -672,7 +722,7 @@ export default function IsometricTerrain() {
         for (let i = 0; i < 2; i++) {
           const pos = findSurfacePos(true)
           const { group, headPivot } = buildVoxelMob(THREE, blockGeo, 0x6b3a2a, 0x8b5a3a, 0x5a2a1a, 1.6, 1.0, 2.0, 0.8, 0.8, 0.5)
-          const surfY = pos.y - 3 + 0.01
+          const surfY = pos.y - 3 + 0.01 // only walk on top surface
           group.position.set(pos.x - offset + 0.5, surfY, pos.z - offset + 0.5)
           group.rotation.y = Math.random() * Math.PI * 2
           world.add(group)
@@ -718,7 +768,7 @@ export default function IsometricTerrain() {
           terrainMeshes.push(beeGroup)
         }
       } else {
-        // Ghasts 
+        // Ghasts only in nether (no Piglin)
         for (let i = 0; i < 2; i++) {
           const pos = findSurfacePos(false)
           const ghast = buildGhast(THREE, blockGeo)
@@ -735,20 +785,21 @@ export default function IsometricTerrain() {
       }
 
       // ── Particles ──
-      const particleCount = 100
+      const particleCount = 200
       const particleGeo = new THREE.BufferGeometry()
       const positionsArr = new Float32Array(particleCount * 3)
       for (let i = 0; i < particleCount; i++) {
-        positionsArr[i * 3] = (Math.random() - 0.5) * 36
-        positionsArr[i * 3 + 1] = Math.random() * 10 - 2
-        positionsArr[i * 3 + 2] = (Math.random() - 0.5) * 36
+        // spread widely
+        positionsArr[i * 3] = (Math.random() - 0.5) * 40
+        positionsArr[i * 3 + 1] = Math.random() * 15 - 4
+        positionsArr[i * 3 + 2] = (Math.random() - 0.5) * 40
       }
       particleGeo.setAttribute("position", new THREE.BufferAttribute(positionsArr, 3))
 
-      const particleColor = isDark ? 0xff6600 : 0xaaffaa
+      const particleColor = isDark ? 0xffaa00 : 0xccffaa // fire motes vs fireflies
       const particleMat = new THREE.PointsMaterial({
         color: particleColor,
-        size: 0.15,
+        size: 0.2,
         transparent: true,
         opacity: 0.8,
       })
@@ -773,6 +824,7 @@ export default function IsometricTerrain() {
         const delta = clock.getDelta()
         const elapsedTime = clock.getElapsedTime()
 
+        // Gentle isometric parallax
         camera.position.x = 24 + mouseX * 2.5
         camera.position.z = 24 + mouseY * 2.5
         camera.lookAt(0, 0, 0)
@@ -787,22 +839,16 @@ export default function IsometricTerrain() {
           const baseY = posAttr.getY(i)
           if (isDark) {
             posAttr.setY(i, baseY + 0.02 + Math.random() * 0.02)
-            if (posAttr.getY(i) > 8) posAttr.setY(i, -2)
+            if (posAttr.getY(i) > 12) posAttr.setY(i, -4)
             posAttr.setX(i, posAttr.getX(i) + Math.sin(elapsedTime + i) * 0.01)
           } else {
-            posAttr.setY(i, baseY + Math.sin(elapsedTime * 2 + i) * 0.003)
-            posAttr.setX(i, posAttr.getX(i) + Math.sin(elapsedTime + i * 0.5) * 0.002)
+            posAttr.setY(i, baseY + Math.sin(elapsedTime * 2 + i) * 0.005)
+            posAttr.setX(i, posAttr.getX(i) + Math.sin(elapsedTime + i * 0.5) * 0.005)
+            // wrap around
+            if (posAttr.getY(i) > 12) posAttr.setY(i, -2)
           }
         }
         posAttr.needsUpdate = true
-
-        // Portal animation
-        if (hasPortal) {
-          const intensity = 0.5 + 0.5 * Math.sin(elapsedTime * 2)
-          if (!Array.isArray(materials.portal)) {
-            materials.portal.opacity = 0.6 + 0.3 * intensity
-          }
-        }
 
         // ── Mob animation ──
         mobs.forEach((mob) => {
@@ -821,7 +867,6 @@ export default function IsometricTerrain() {
 
             let canMove = true
 
-            // Bounds and valid ground check
             if (
               gridX < 0 || gridX >= gridSize ||
               gridZ < 0 || gridZ >= gridSize ||
@@ -831,12 +876,10 @@ export default function IsometricTerrain() {
             ) {
               canMove = false
             } else {
-              // Only walk on top layer: adjust Y height dynamically
+              // constraint: walk only on top layer
               const targetY = heights[gridZ][gridX] - 3 + 0.01
-              // Smooth Y transition
               mob.group.position.y += (targetY - mob.group.position.y) * 0.1
 
-              // Only move horizontally if height diff is small
               if (Math.abs(targetY - mob.group.position.y) > 1.2) {
                 canMove = false
               }
@@ -932,6 +975,7 @@ export default function IsometricTerrain() {
         allMeshes.forEach(m => world.remove(m))
         mobs.forEach(m => world.remove(m.group))
         blockGeo.dispose()
+        flowerGeo.dispose()
         Object.values(materials).forEach(m => {
           if (Array.isArray(m)) m.forEach(mat => mat.dispose())
           else m.dispose()

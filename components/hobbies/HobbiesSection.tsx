@@ -225,18 +225,10 @@ function MusicCard({ visible, delay }: { visible: boolean; delay: number }) {
         opacity: visible ? 1 : 0,
         transform: visible ? "translateY(0)" : "translateY(40px)",
         transition: `all 600ms cubic-bezier(0.34, 1.56, 0.64, 1) ${delay}ms`,
+        height: "100%",
       }}
     >
-      <BrutalistCard className="h-full">
-        <div className="flex items-center gap-3 mb-4">
-          <PixelNoteIcon />
-          <h3 className="font-sans text-lg font-bold" style={{ color: "var(--text)" }}>
-            MUSIC
-          </h3>
-        </div>
-
-        <SpotifyNowPlaying />
-      </BrutalistCard>
+      <SpotifyNowPlaying />
     </div>
   )
 }
