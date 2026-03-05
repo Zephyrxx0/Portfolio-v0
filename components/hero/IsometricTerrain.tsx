@@ -635,6 +635,7 @@ export default function IsometricTerrain() {
 
       const heights: number[][] = []
       const blockTypes: string[][] = []
+      const edgeFactors: number[][] = []
 
       const terrainMeshes: THREE.Object3D[] = []
 
@@ -642,6 +643,7 @@ export default function IsometricTerrain() {
       for (let z = 0; z < gridSize; z++) {
         heights[z] = []
         blockTypes[z] = []
+        edgeFactors[z] = []
         for (let x = 0; x < gridSize; x++) {
           const nx = x / gridSize
           const nz = z / gridSize
@@ -651,23 +653,23 @@ export default function IsometricTerrain() {
           const dist = Math.sqrt(cx * cx + cz * cz)
           const normDist = dist / offset
 
-          const noiseValue = fbm(nx * 8, nz * 8, 3)
-          const ditherThreshold = 0.3 + (normDist * 0.7)
-
           const mainIslandRadius = 0.55
+          const edgeFadeStart = 0.42
+          const edgeFadeEnd = 0.95
 
           let skip = false
-          if (normDist > mainIslandRadius) {
-            if (isDark) {
-              if (noiseValue < ditherThreshold) skip = true
-            } else {
-              if (noiseValue > 0.8 && normDist < 0.85) {
-                skip = false
-              } else {
-                skip = true
-              }
+          let edgeFactor = 0
+
+          if (normDist > edgeFadeStart) {
+            edgeFactor = Math.min(1, (normDist - edgeFadeStart) / (edgeFadeEnd - edgeFadeStart))
+            const edgeNoise = fbm(nx * 10 + 77, nz * 10 + 33, 4)
+            const threshold = Math.pow(edgeFactor, 1.8)
+            if (edgeNoise < threshold || normDist > edgeFadeEnd) {
+              skip = true
             }
           }
+
+          edgeFactors[z][x] = edgeFactor
 
           if (skip) {
             heights[z][x] = -99
@@ -748,6 +750,11 @@ export default function IsometricTerrain() {
             }
           }
 
+          // Reduce height at island edges for natural thinning
+          if (edgeFactor > 0) {
+            h = h * Math.max(0.3, 1 - edgeFactor * 0.7)
+          }
+
           h = Math.max(1, Math.min(Math.round(h), maxHeight))
           heights[z][x] = h
         }
@@ -788,7 +795,18 @@ export default function IsometricTerrain() {
 
           const stackHeight = h
 
-          for (let y = 0; y <= stackHeight; y++) {
+          // Edge erosion: skip bottom blocks for crumbling underside
+          const ef = edgeFactors[z]?.[x] || 0
+          let startY = 0
+          if (ef > 0.15 && stackHeight > 1) {
+            const erosionNoise = hash(x * 31 + 7, z * 17 + 11)
+            startY = Math.min(
+              Math.floor(ef * stackHeight * erosionNoise * 0.8),
+              stackHeight - 1
+            )
+          }
+
+          for (let y = startY; y <= stackHeight; y++) {
             let mat: THREE.Material | THREE.Material[]
 
             if (y === stackHeight) {
@@ -852,6 +870,34 @@ export default function IsometricTerrain() {
       const tallGrassGeo = new THREE.PlaneGeometry(0.8, 0.8)
       const lilyPadGeo = new THREE.PlaneGeometry(0.7, 0.7)
       const railGeo = new THREE.PlaneGeometry(1, 1)
+
+      // Build a small floating island cluster
+      const buildFloatingIsland = (
+        icx: number, icy: number, icz: number, iRadius: number,
+        surfMat: THREE.Material | THREE.Material[],
+        midMat: THREE.Material | THREE.Material[],
+        botMat: THREE.Material | THREE.Material[],
+      ) => {
+        for (let dx = -iRadius; dx <= iRadius; dx++) {
+          for (let dz = -iRadius; dz <= iRadius; dz++) {
+            const d = Math.sqrt(dx * dx + dz * dz)
+            if (d > iRadius + 0.3) continue
+            if (d > iRadius * 0.5 && hash(Math.abs(dx) + Math.round(icx) * 7, Math.abs(dz) + Math.round(icz) * 11) > 0.55) continue
+
+            const colH = Math.max(1, Math.round((iRadius - d + 1) * (0.6 + hash(dx + Math.round(icx) * 3, dz + Math.round(icz) * 5) * 0.6)))
+            for (let dy = 0; dy < colH; dy++) {
+              const mat = dy === 0 ? surfMat : (dy >= colH - 1 ? botMat : midMat)
+              const block = new THREE.Mesh(blockGeo, mat)
+              block.position.set(icx + dx, icy - dy, icz + dz)
+              block.castShadow = true
+              block.receiveShadow = true
+              world.add(block)
+              allMeshes.push(block)
+              terrainMeshes.push(block)
+            }
+          }
+        }
+      }
 
       if (!isDark) {
         let placedCrafting = false
@@ -1003,26 +1049,58 @@ export default function IsometricTerrain() {
           }
         }
 
-        // Floating blocks around the island
+        // Floating islands around the main island
+        const owIslands = [
+          { angle: 2.5, dist: 15, y: 3, radius: 3 },
+          { angle: 0.7, dist: 14, y: 0, radius: 2 },
+          { angle: 4.3, dist: 16, y: -1, radius: 2 },
+          { angle: 5.5, dist: 13, y: 2, radius: 1 },
+          { angle: 1.4, dist: 17, y: -2, radius: 1 },
+          { angle: 3.8, dist: 18, y: 1, radius: 1 },
+        ]
+
+        owIslands.forEach(island => {
+          const ix = Math.cos(island.angle) * island.dist
+          const iz = Math.sin(island.angle) * island.dist
+          buildFloatingIsland(ix, island.y, iz, island.radius, materials.grass, materials.dirt, materials.stone)
+
+          // Add small tree on larger islands
+          if (island.radius >= 2) {
+            const treeTypes = [
+              { log: materials.wood_log, leaf: materials.oak_leaves },
+              { log: materials.birch_log, leaf: materials.birch_leaves },
+              { log: materials.spruce_log, leaf: materials.spruce_leaves },
+            ]
+            const tt = treeTypes[Math.floor(hash(island.angle * 10, island.dist) * treeTypes.length)]
+            addDeco(blockGeo, tt.log, ix, island.y + 1, iz, true)
+            addDeco(blockGeo, tt.log, ix, island.y + 2, iz, true)
+            addDeco(blockGeo, tt.leaf, ix, island.y + 3, iz, true)
+            for (let lx = -1; lx <= 1; lx++) {
+              for (let lz = -1; lz <= 1; lz++) {
+                if (lx === 0 && lz === 0) continue
+                if (Math.abs(lx) + Math.abs(lz) === 2 && hash(lx + island.dist, lz + island.angle * 5) > 0.5) continue
+                addDeco(blockGeo, tt.leaf, ix + lx, island.y + 2, iz + lz, true)
+              }
+            }
+          }
+        })
+
+        // Scattered debris blocks
         const floatingBlockMats = [
           materials.grass, materials.stone, materials.dirt,
           materials.cobblestone, materials.mossy_cobblestone,
-          materials.gold_ore, materials.iron_ore, materials.diamond_ore,
-          materials.coal_ore, materials.redstone_ore,
-          materials.oak_planks, materials.lava, materials.sand,
-          materials.gravel, materials.stone_bricks,
-          materials.mossy_stone_bricks, materials.tnt,
-          materials.melon, materials.pumpkin,
+          materials.gold_ore, materials.iron_ore,
+          materials.oak_planks, materials.sand,
           materials.moss, materials.clay,
         ]
 
-        for (let i = 0; i < 14; i++) {
+        for (let i = 0; i < 10; i++) {
           const angle = Math.random() * Math.PI * 2
-          const radius = 12 + Math.random() * 8
+          const radius = 13 + Math.random() * 8
           const fx = Math.cos(angle) * radius
           const fz = Math.sin(angle) * radius
-          const fy = -2 + Math.random() * 8
-          const scale = 0.6 + Math.random() * 0.6
+          const fy = -3 + Math.random() * 10
+          const scale = 0.5 + Math.random() * 0.5
           const mat = floatingBlockMats[Math.floor(Math.random() * floatingBlockMats.length)]
 
           const floatBlock = new THREE.Mesh(blockGeo, mat)
@@ -1134,7 +1212,42 @@ export default function IsometricTerrain() {
           }
         }
 
-        // Nether floating blocks
+        // Nether floating islands
+        const netherIslands = [
+          { angle: 2.3, dist: 15, y: 4, radius: 3, tree: true },
+          { angle: 5.0, dist: 14, y: 1, radius: 2, tree: false },
+          { angle: 0.5, dist: 16, y: 2, radius: 2, tree: true },
+          { angle: 3.5, dist: 13, y: -1, radius: 1, tree: false },
+          { angle: 1.2, dist: 17, y: 0, radius: 1, tree: false },
+          { angle: 4.5, dist: 18, y: 3, radius: 1, tree: false },
+        ]
+
+        netherIslands.forEach(island => {
+          const ix = Math.cos(island.angle) * island.dist
+          const iz = Math.sin(island.angle) * island.dist
+          const isWarped = hash(Math.round(island.angle * 10), Math.round(island.dist)) > 0.5
+          const surfMat = isWarped ? materials.warped_nylium : materials.crimson_nylium
+          buildFloatingIsland(ix, island.y, iz, island.radius, surfMat, materials.netherrack, materials.blackstone)
+
+          // Add fungi tree on islands with tree flag
+          if (island.tree) {
+            const stemMat = isWarped ? materials.warped_stem : materials.crimson_stem
+            const capMat = isWarped ? materials.warped_wart_block : materials.nether_wart_block
+            for (let ty = 1; ty <= 3; ty++) {
+              addDeco(blockGeo, stemMat, ix, island.y + ty, iz, true)
+            }
+            addDeco(blockGeo, materials.shroomlight, ix, island.y + 4, iz, true)
+            for (let lx = -1; lx <= 1; lx++) {
+              for (let lz = -1; lz <= 1; lz++) {
+                if (lx === 0 && lz === 0) continue
+                if (Math.abs(lx) + Math.abs(lz) === 2 && hash(lx + island.dist, lz + Math.round(island.angle * 5)) > 0.5) continue
+                addDeco(blockGeo, capMat, ix + lx, island.y + 3, iz + lz, true)
+              }
+            }
+          }
+        })
+
+        // Scattered nether debris blocks
         const netherFloatingMats = [
           materials.netherrack, materials.blackstone, materials.basalt,
           materials.magma, materials.nether_bricks, materials.glowstone,
@@ -1144,13 +1257,13 @@ export default function IsometricTerrain() {
           materials.nether_wart_block, materials.warped_wart_block,
         ]
 
-        for (let i = 0; i < 12; i++) {
+        for (let i = 0; i < 10; i++) {
           const angle = Math.random() * Math.PI * 2
-          const radius = 12 + Math.random() * 8
+          const radius = 13 + Math.random() * 8
           const fx = Math.cos(angle) * radius
           const fz = Math.sin(angle) * radius
-          const fy = -2 + Math.random() * 8
-          const scale = 0.6 + Math.random() * 0.6
+          const fy = -3 + Math.random() * 10
+          const scale = 0.5 + Math.random() * 0.5
           const mat = netherFloatingMats[Math.floor(Math.random() * netherFloatingMats.length)]
 
           const floatBlock = new THREE.Mesh(blockGeo, mat)
