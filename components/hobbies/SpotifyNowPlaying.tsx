@@ -69,7 +69,7 @@ function NowPlayingCard({ data }: { data: NowPlayingData }) {
       style={{
         border: "3px solid var(--text)",
         boxShadow: "4px 4px 0 var(--shadow)",
-        background: "#0a0a0a",
+        background: "var(--bg)",
       }}
     >
       {/* ── Top section: intrinsic-ratio container so height is ALWAYS tied to width ── */}
@@ -92,7 +92,7 @@ function NowPlayingCard({ data }: { data: NowPlayingData }) {
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="absolute inset-0 flex items-center justify-center" style={{ background: "#1a1a1a" }}>
+            <div className="absolute inset-0 flex items-center justify-center" style={{ background: "var(--bg2)" }}>
               <PixelNoteIcon color="#333" />
             </div>
           )}
@@ -104,7 +104,7 @@ function NowPlayingCard({ data }: { data: NowPlayingData }) {
           {/* Visualization panel */}
           <button
             onClick={cycleViz}
-            className="flex items-center justify-center cursor-pointer transition-colors hover:bg-white/5"
+            className="flex items-center justify-center cursor-pointer transition-colors hover:bg-black/5"
             style={{
               width: "100%",
               aspectRatio: "1 / 1",
@@ -261,7 +261,7 @@ function NowPlayingCard({ data }: { data: NowPlayingData }) {
             href={data.songUrl ?? "#"}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex w-full overflow-hidden transition-colors hover:bg-white/5"
+            className="flex w-full overflow-hidden transition-colors hover:bg-black/5"
             style={{
               cursor: data.songUrl ? "pointer" : "default",
               borderRadius: "14px",
