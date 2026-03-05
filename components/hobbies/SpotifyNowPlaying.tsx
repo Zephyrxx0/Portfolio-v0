@@ -201,26 +201,29 @@ function NowPlayingCard({ data }: { data: NowPlayingData }) {
         className="flex shrink-0 overflow-hidden"
         style={{
           borderTop: "0px",
-          padding: "0px",
+          padding: "6px",
         }}
       >
         {data.prev ? (
           // ── Has prev track data ──
           <div
-            className="flex w-full overflow-hidden items-stretch"
+            className="flex w-full overflow-hidden"
+            style={{
+              borderRadius: "14px",
+            }}
           >
             {data.prev.albumArt && (
               <img
                 src={data.prev.albumArt}
                 alt=""
-                className="object-cover"
+                className="shrink-0 object-cover"
                 style={{
-                  alignSelf: "stretch",
-                  width: "auto",
-                  aspectRatio: "1 / 1",
-                  margin: "2px",
-                  borderRadius: "6px",
+                  width: "80px",
+                  height: "80px",
+                  margin: "6px",
+                  borderRadius: "10px",
                   flexShrink: 0,
+                  alignSelf: "center",
                 }}
               />
             )}
@@ -258,23 +261,24 @@ function NowPlayingCard({ data }: { data: NowPlayingData }) {
             href={data.songUrl ?? "#"}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex w-full overflow-hidden items-stretch transition-colors hover:bg-black/5"
+            className="flex w-full overflow-hidden transition-colors hover:bg-black/5"
             style={{
               cursor: data.songUrl ? "pointer" : "default",
+              borderRadius: "14px",
             }}
           >
             {data.albumArt && (
               <img
                 src={data.albumArt}
                 alt=""
-                className="object-cover"
+                className="shrink-0 object-cover"
                 style={{
-                  alignSelf: "stretch",
-                  width: "auto",
-                  aspectRatio: "1 / 1",
-                  margin: "2px",
-                  borderRadius: "6px",
+                  width: "80px",
+                  height: "80px",
+                  margin: "6px",
+                  borderRadius: "10px",
                   flexShrink: 0,
+                  alignSelf: "center",
                 }}
               />
             )}
