@@ -242,6 +242,7 @@ function ArtCard({ visible, delay }: { visible: boolean; delay: number }) {
         opacity: visible ? 1 : 0,
         transform: visible ? "translateY(0)" : "translateY(40px)",
         transition: `all 600ms cubic-bezier(0.34, 1.56, 0.64, 1) ${delay}ms`,
+        height: "100%",
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -255,7 +256,7 @@ function ArtCard({ visible, delay }: { visible: boolean; delay: number }) {
         </div>
 
         {/* Pixel art grid that reveals on hover */}
-        <div className="relative mb-4">
+        <div className="relative mb-4 w-[75%] mx-auto">
           <div className="grid grid-cols-8 gap-0.5">
             {Array.from({ length: 64 }).map((_, i) => {
               const row = Math.floor(i / 8)
