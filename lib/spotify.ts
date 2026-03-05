@@ -27,26 +27,24 @@ let tokenExpiresAt = 0
 let rotatedRefreshToken: string | undefined
 
 /**
- * Read credentials directly from the .env file on disk, bypassing process.env.
- * This prevents stale env vars set in the shell from overriding .env values.
+ * Read credentials from .env file first, falling back to process.env.
+ * The .env file takes priority locally to prevent stale shell env vars
+ * from overriding .env values. On Vercel, no .env file exists so
+ * process.env (populated from the Vercel dashboard) is used instead.
  */
-function readEnvFile(): Record<string, string> {
+function getCredentials(key: string): string | undefined {
   try {
     const envPath = resolve(process.cwd(), ".env")
     const content = readFileSync(envPath, "utf-8")
-    return Object.fromEntries(
-      content
-        .split("\n")
-        .map((l) => l.trim())
-        .filter((l) => l && !l.startsWith("#") && l.includes("="))
-        .map((l) => {
-          const i = l.indexOf("=")
-          return [l.slice(0, i).trim(), l.slice(i + 1).trim()]
-        })
-    )
+    for (const line of content.split("\n")) {
+      const trimmed = line.trim()
+      if (trimmed.startsWith("#") || !trimmed.startsWith(key + "=")) continue
+      return trimmed.slice(key.length + 1).trim()
+    }
   } catch {
-    return {}
+    // .env not found (e.g. Vercel) — fall through to process.env
   }
+  return process.env[key]
 }
 
 async function getAccessToken(): Promise<string | null> {
@@ -55,12 +53,9 @@ async function getAccessToken(): Promise<string | null> {
     return cachedAccessToken
   }
 
-  // Read directly from .env file — process.env may contain stale/wrong values
-  // if the user has SPOTIFY_* vars set in their shell environment
-  const envFile = readEnvFile()
-  const clientId = envFile.SPOTIFY_CLIENT_ID
-  const clientSecret = envFile.SPOTIFY_CLIENT_SECRET
-  const envRefreshToken = envFile.SPOTIFY_REFRESH_TOKEN
+  const clientId = getCredentials("SPOTIFY_CLIENT_ID")
+  const clientSecret = getCredentials("SPOTIFY_CLIENT_SECRET")
+  const envRefreshToken = getCredentials("SPOTIFY_REFRESH_TOKEN")
 
   const refreshToken = rotatedRefreshToken ?? envRefreshToken
 
