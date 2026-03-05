@@ -16,8 +16,9 @@ const CURRENTLY_PLAYING_ENDPOINT =
 const PLAYER_STATE_ENDPOINT = "https://api.spotify.com/v1/me/player"
 
 // GET /v1/me/player/recently-played — scope: user-read-recently-played
+// limit=2: index[0] = most recent, index[1] = the one before that
 const RECENTLY_PLAYED_ENDPOINT =
-  "https://api.spotify.com/v1/me/player/recently-played?limit=1"
+  "https://api.spotify.com/v1/me/player/recently-played?limit=2"
 
 // ── Token management ──
 // Cache the access token in memory (valid for ~1 hour per Spotify docs)
@@ -119,6 +120,12 @@ export interface NowPlayingData {
   albumArt?: string
   songUrl?: string
   album?: string
+  // prev = the track played just before the current one (shown in the bottom bar)
+  prev?: {
+    title?: string
+    album?: string
+    albumArt?: string
+  }
 }
 
 // Extract track fields from a Spotify player response object
@@ -146,13 +153,32 @@ function extractTrack(data: Record<string, unknown>): NowPlayingData | null {
   }
 }
 
+// Helper to shape a recently-played track item into our prev format
+function extractPrevTrack(item: Record<string, unknown> | undefined) {
+  if (!item) return undefined
+  const album = item.album as Record<string, unknown> | undefined
+  const images = album?.images as Array<{ url: string }> | undefined
+  return {
+    title: item.name as string | undefined,
+    album: album?.name as string | undefined,
+    albumArt: images?.[0]?.url,
+  }
+}
+
 export async function getNowPlaying(): Promise<NowPlayingData> {
   const accessToken = await getAccessToken()
   if (!accessToken) return { isPlaying: false }
 
+  // Fetch recently-played in parallel with the current-playing check.
+  // We always want this so we can populate the "prev" field in the bottom bar.
+  // limit=2 → items[0] is most recent, items[1] is the one before that.
+  const rpPromise = fetch(RECENTLY_PLAYED_ENDPOINT, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    cache: "no-store",
+  }).then((r) => (r.ok ? r.json() : null)).catch(() => null)
+
   // ── 1. GET /v1/me/player/currently-playing ──
   // Primary endpoint — lightweight, returns current track
-  // Scope: user-read-currently-playing
   // 200 = data available (playing or paused), 204 = nothing in player
   const cpRes = await fetch(CURRENTLY_PLAYING_ENDPOINT, {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -162,7 +188,12 @@ export async function getNowPlaying(): Promise<NowPlayingData> {
   if (cpRes.status === 200) {
     const cpData = await cpRes.json()
     const track = extractTrack(cpData)
-    if (track) return track
+    if (track) {
+      // Currently playing: prev = most recent in recently-played (items[0])
+      const rpData = await rpPromise
+      track.prev = extractPrevTrack(rpData?.items?.[0]?.track)
+      return track
+    }
   } else if (cpRes.status === 401) {
     console.error("[Spotify] 401 Unauthorized — access token expired or invalid")
     cachedAccessToken = null
@@ -171,8 +202,8 @@ export async function getNowPlaying(): Promise<NowPlayingData> {
   } else if (cpRes.status === 403) {
     console.error(
       "[Spotify] 403 Forbidden on /currently-playing — your refresh token is missing the " +
-        "user-read-currently-playing scope. Re-authorize at: " +
-        "https://accounts.spotify.com/authorize?response_type=code&scope=user-read-currently-playing+user-read-playback-state+user-read-recently-played"
+      "user-read-currently-playing scope. Re-authorize at: " +
+      "https://accounts.spotify.com/authorize?response_type=code&scope=user-read-currently-playing+user-read-playback-state+user-read-recently-played"
     )
   } else if (cpRes.status === 429) {
     console.warn("[Spotify] 429 Rate Limited — try again later")
@@ -181,8 +212,7 @@ export async function getNowPlaying(): Promise<NowPlayingData> {
   // 204 = nothing in player, fall through to next step
 
   // ── 2. GET /v1/me/player (playback state) ──
-  // Broader endpoint — includes device info, may return data when currently-playing gives 204
-  // Scope: user-read-playback-state
+  // Broader endpoint — may return data when currently-playing gives 204
   const psRes = await fetch(PLAYER_STATE_ENDPOINT, {
     headers: { Authorization: `Bearer ${accessToken}` },
     cache: "no-store",
@@ -191,31 +221,27 @@ export async function getNowPlaying(): Promise<NowPlayingData> {
   if (psRes.status === 200) {
     const psData = await psRes.json()
     const track = extractTrack(psData)
-    if (track) return track
+    if (track) {
+      const rpData = await rpPromise
+      track.prev = extractPrevTrack(rpData?.items?.[0]?.track)
+      return track
+    }
   }
-  // 204 or 403 (missing scope) — fall through
 
   // ── 3. GET /v1/me/player/recently-played (fallback) ──
-  // Scope: user-read-recently-played
-  const rpRes = await fetch(RECENTLY_PLAYED_ENDPOINT, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-    cache: "no-store",
-  })
-
-  if (rpRes.ok) {
-    const rpData = await rpRes.json()
-    const item = rpData.items?.[0]?.track
-    if (item) {
-      return {
-        isPlaying: false,
-        title: item.name,
-        artist: item.artists
-          ?.map((a: { name: string }) => a.name)
-          .join(", "),
-        albumArt: item.album?.images?.[0]?.url,
-        songUrl: item.external_urls?.spotify,
-        album: item.album?.name,
-      }
+  // Nothing playing at all — show items[0] as current, items[1] as prev
+  const rpData = await rpPromise
+  const item = rpData?.items?.[0]?.track
+  if (item) {
+    return {
+      isPlaying: false,
+      title: item.name,
+      artist: item.artists?.map((a: { name: string }) => a.name).join(", "),
+      albumArt: item.album?.images?.[0]?.url,
+      songUrl: item.external_urls?.spotify,
+      album: item.album?.name,
+      // prev = the track before items[0]
+      prev: extractPrevTrack(rpData?.items?.[1]?.track),
     }
   }
 

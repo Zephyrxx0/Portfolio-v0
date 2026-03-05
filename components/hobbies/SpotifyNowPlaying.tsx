@@ -1,7 +1,10 @@
 "use client"
 import { useEffect, useState } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 import BrutalistCard from "../shared/BrutalistCard"
 
+// ── Types ──────────────────────────────────────────────────────────────
+// Shape of the data we get back from the /api/now-playing endpoint
 interface NowPlayingData {
   isPlaying: boolean
   title?: string
@@ -9,8 +12,19 @@ interface NowPlayingData {
   albumArt?: string
   songUrl?: string
   album?: string
+  // prev = the track played just before this one (populated by the API)
+  prev?: {
+    title?: string
+    album?: string
+    albumArt?: string
+  }
 }
 
+// The three visualization styles the user can cycle through by clicking
+type VizMode = "bars" | "waveform" | "sphere"
+
+// ── Root component ─────────────────────────────────────────────────────
+// Fetches Spotify data every 30 seconds and picks which view to show
 export default function SpotifyNowPlaying() {
   const [data, setData] = useState<NowPlayingData | null>(null)
   const [hasCredentials, setHasCredentials] = useState(true)
@@ -18,16 +32,17 @@ export default function SpotifyNowPlaying() {
   useEffect(() => {
     const fetchNowPlaying = async () => {
       try {
-        const res = await fetch("/api/now-playing")
+        const res = await fetch("/api/now-playing", { cache: "no-store" })
         const json: NowPlayingData = await res.json()
         setData(json)
       } catch {
+        // If the API call fails entirely, hide the card
         setHasCredentials(false)
       }
     }
 
     fetchNowPlaying()
-    const interval = setInterval(fetchNowPlaying, 30000)
+    const interval = setInterval(fetchNowPlaying, 30000) // refresh every 30s
     return () => clearInterval(interval)
   }, [])
 
@@ -37,131 +52,440 @@ export default function SpotifyNowPlaying() {
   return <NowPlayingCard data={data} />
 }
 
+// ── Main card layout ───────────────────────────────────────────────────
+// Shows album art on the left, viz + text on the right, and last-played bar at the bottom.
+// The album art takes up most of the space — the right column is intentionally narrow.
 function NowPlayingCard({ data }: { data: NowPlayingData }) {
+  const [vizMode, setVizMode] = useState<VizMode>("bars")
   const isPlaying = data.isPlaying
 
-  return (
-    <BrutalistCard
-      className="relative h-full overflow-hidden flex flex-col"
-      style={{ padding: 0, minHeight: "280px" }}
-      hoverable={false}
-    >
-      {/* ── Main area: album art (left) + info column (right) ── */}
-      <div className="flex flex-1 min-h-0" style={{ borderBottom: "3px solid var(--border)" }}>
+  // Click the viz box to cycle through styles: bars → waveform → sphere → bars
+  const cycleViz = () =>
+    setVizMode((m) => ({ bars: "waveform", waveform: "sphere", sphere: "bars" } as const)[m])
 
-        {/* Left: Album art */}
+  return (
+    <div
+      className="relative h-full flex flex-col overflow-hidden"
+      style={{
+        border: "3px solid var(--text)",
+        boxShadow: "4px 4px 0 var(--shadow)",
+        background: "#0a0a0a",
+      }}
+    >
+      {/* ── Top section: album art (big left) + right column (narrow) ── */}
+      {/*
+        KEY TRICK: we do NOT use flex-1 here.
+        Instead, the LEFT column has a fixed width + aspect-ratio:1/1 + flex-shrink:0.
+        This means the LEFT column's width forces its own height (width = height = square).
+        That height then defines the row height, which the RIGHT column stretches to fill.
+        If we used flex-1 the parent would control height, breaking the square.
+      */}
+      <div className="flex" style={{ borderBottom: "3px solid var(--text)" }}>
+
+        {/* ── LEFT: Album art — width drives height to make a true square ── */}
         <div
-          className="flex-1 p-3 flex items-center justify-center"
-          style={{ borderRight: "3px solid var(--border)" }}
+          className="relative overflow-hidden"
+          style={{
+            width: "76%",           /* takes most of the card width */
+            aspectRatio: "1 / 1",   /* height = width → always a perfect square */
+            flexShrink: 0,          /* don't let flex squish this — it must stay square */
+            borderRight: "3px solid var(--text)",
+          }}
         >
           {data.albumArt ? (
             <img
               src={data.albumArt}
-              alt={data.album ?? "Album Art"}
-              className="w-full h-full object-cover"
-              style={{ border: "3px solid var(--border)", borderRadius: "6px" }}
+              alt={data.album ?? "Album art"}
+              className="absolute inset-0 w-full h-full object-cover"
             />
           ) : (
-            <div
-              className="w-full h-full flex items-center justify-center"
-              style={{ border: "3px solid var(--border)", borderRadius: "6px", background: "var(--bg)" }}
-            >
-              <PixelNoteIcon color="var(--muted)" />
+            <div className="absolute inset-0 flex items-center justify-center" style={{ background: "#1a1a1a" }}>
+              <PixelNoteIcon color="#333" />
             </div>
           )}
         </div>
 
-        {/* Right column: visualization + song info */}
-        <div className="flex flex-col" style={{ width: "120px", minWidth: "120px" }}>
+        {/* ── RIGHT: narrow column, stretches to match the square's height ── */}
+        {/* overflow:hidden is critical — prevents long vertical text from pushing row taller than the art */}
+        <div className="flex flex-col" style={{ flex: 1, alignSelf: "stretch", overflow: "hidden" }}>
 
-          {/* Top: Equalizer visualization */}
-          <div
-            className="flex items-end gap-[3px] px-3 pb-2 pt-3"
-            style={{ borderBottom: "3px solid var(--border)", height: "70px" }}
+          {/* Visualization panel — takes ALL remaining height in the right column */}
+          {/* The viz fills flex-1 so it uses every pixel not claimed by the text rows */}
+          {/* Viz square: width = 100% of the right column, height = width via aspect-ratio */}
+          <button
+            onClick={cycleViz}
+            className="flex items-center justify-center cursor-pointer transition-colors hover:bg-white/5"
+            style={{
+              width: "100%",            /* fill the column width */
+              aspectRatio: "1 / 1",     /* height = width → perfect square */
+              flexShrink: 0,            /* don't let it shrink */
+              borderBottom: "3px solid var(--text)",
+              padding: 0,
+            }}
+            title="Click to switch visualization"
           >
-            {[4, 8, 3, 6, 2, 7, 5].map((n, i) => (
-              <div
-                key={i}
-                className={`w-[6px] ${isPlaying ? `eq-bar-${n}` : ""}`}
-                style={{
-                  background: "var(--accent)",
-                  height: isPlaying ? undefined : `${n * 3}px`,
-                  opacity: isPlaying ? 1 : 0.35,
-                }}
-              />
-            ))}
-          </div>
+            <AnimatePresence mode="wait">
+              {vizMode === "bars" && <BrutalistBarsViz key="bars" isPlaying={isPlaying} />}
+              {vizMode === "waveform" && <BrutalistBlockViz key="block" isPlaying={isPlaying} />}
+              {vizMode === "sphere" && <BrutalistGridViz key="grid" isPlaying={isPlaying} />}
+            </AnimatePresence>
+          </button>
 
-          {/* Bottom: Song name (vertical) + album + artist */}
-          <div className="flex-1 flex flex-col overflow-hidden p-3 gap-2">
-            {/* Song name — rotated so it reads bottom-to-top */}
-            <div className="flex-1 overflow-hidden flex items-end">
+          {/* ── Song info: three vertical texts as compact as possible ── */}
+          {/* gap-0 = no spacing between text columns; they sit right next to each other */}
+          <div className="flex items-center justify-center overflow-hidden shrink-0" style={{ padding: 0, gap: 0 }}>
+
+            {/* SONG NAME — largest, heaviest weight */}
+            <div className="flex-1 flex items-center justify-center overflow-hidden">
               <span
-                className="font-pixel text-[10px] font-black uppercase leading-none"
+                className="font-sans uppercase leading-none"
                 style={{
-                  color: "var(--accent)",
                   writingMode: "vertical-rl",
                   transform: "rotate(180deg)",
+                  fontSize: "clamp(15px, 2.2vw, 22px)",
+                  fontWeight: 900,
+                  color: "var(--text)",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
                   maxHeight: "100%",
-                  display: "block",
+                  letterSpacing: "0.06em",
                 }}
                 title={data.title}
               >
-                {data.title}
+                {/* Truncate title at 14 chars — vertical text can't use CSS ellipsis reliably */}
+                {data.title && data.title.length > 14 ? data.title.slice(0, 14) + "…" : data.title}
               </span>
             </div>
 
-            {/* Album */}
-            <p
-              className="font-pixel text-[7px] font-bold uppercase"
-              style={{ color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-              title={data.album}
-            >
-              {data.album}
-            </p>
+            {/* ALBUM — medium size, italic */}
+            <div className="flex items-center justify-center overflow-hidden">
+              <span
+                className="font-sans leading-none"
+                style={{
+                  writingMode: "vertical-rl",
+                  transform: "rotate(180deg)",
+                  fontSize: "clamp(9px, 1.3vw, 12px)",
+                  fontWeight: 600,
+                  fontStyle: "italic",
+                  color: "var(--text)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  maxHeight: "100%",
+                  letterSpacing: "0.04em",
+                  opacity: 0.7,
+                }}
+                title={data.album}
+              >
+                {/* Truncate album at 18 chars */}
+                {data.album && data.album.length > 18 ? data.album.slice(0, 18) + "…" : data.album}
+              </span>
+            </div>
 
-            {/* Artist */}
-            <p
-              className="font-pixel text-[7px] uppercase"
-              style={{ color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-              title={data.artist}
-            >
-              {data.artist}
-            </p>
+            {/* ARTIST — smallest, lightest weight */}
+            <div className="flex items-center justify-center overflow-hidden">
+              <span
+                className="font-sans leading-none"
+                style={{
+                  writingMode: "vertical-rl",
+                  transform: "rotate(180deg)",
+                  fontSize: "clamp(7px, 0.9vw, 9px)",
+                  fontWeight: 300,
+                  color: "var(--muted)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  maxHeight: "100%",
+                  letterSpacing: "0.03em",
+                }}
+                title={data.artist}
+              >
+                {/* Truncate artist at 14 chars */}
+                {data.artist && data.artist.length > 14 ? data.artist.slice(0, 14) + "…" : data.artist}
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ── Bottom strip: status + track summary ── */}
+      {/* ── Bottom bar: shows the PREVIOUS track ── */}
+      {/*
+        Left side: prev album art — fills the full bar height
+        Right side: label + song title + album name
+        If there's no prev data yet, falls back to the NOW PLAYING / LAST PLAYED strip
+      */}
       <div
-        className="flex items-center justify-between px-4 shrink-0"
-        style={{ height: "44px" }}
+        className="flex shrink-0 overflow-hidden"
+        style={{ borderTop: "0px" }} // border comes from the top-section's borderBottom
       >
-        <div className="flex items-center gap-2">
-          <SpotifyIcon color="var(--accent)" />
-          <span
-            className="font-pixel text-[7px] tracking-widest"
-            style={{ color: isPlaying ? "var(--accent)" : "var(--muted)" }}
+        {data.prev ? (
+          // ── Has prev track data: show it ──
+          <>
+            {/* Prev album art — fills the bar's full height, no rounding */}
+            {data.prev.albumArt && (
+              <img
+                src={data.prev.albumArt}
+                alt=""
+                className="shrink-0 object-cover"
+                style={{
+                  width: "52px",
+                  height: "52px",
+                  borderRight: "3px solid var(--text)",
+                }}
+              />
+            )}
+            {/* Prev track text info */}
+            <div className="flex flex-col justify-center min-w-0 overflow-hidden px-3 py-2 gap-0.5">
+              {/* PREV TRACK label + Spotify icon */}
+              <div className="flex items-center gap-1.5">
+                <SpotifyIcon />
+                <span
+                  className="font-sans font-black uppercase shrink-0"
+                  style={{ fontSize: "7px", letterSpacing: "0.14em", color: "var(--muted)" }}
+                >
+                  PREV TRACK
+                </span>
+              </div>
+              {/* Prev song title — bold */}
+              <span
+                className="font-sans truncate"
+                style={{ fontSize: "10px", fontWeight: 700, color: "var(--text)" }}
+                title={data.prev.title}
+              >
+                {data.prev.title}
+              </span>
+              {/* Prev album name — italic, muted */}
+              {data.prev.album && (
+                <span
+                  className="font-sans truncate"
+                  style={{ fontSize: "8px", fontStyle: "italic", color: "var(--muted)" }}
+                  title={data.prev.album}
+                >
+                  {data.prev.album}
+                </span>
+              )}
+            </div>
+          </>
+        ) : (
+          // ── No prev track yet: fall back to the NOW PLAYING / LAST PLAYED strip ──
+          <a
+            href={data.songUrl ?? "#"}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 px-4 py-2.5 w-full transition-colors hover:bg-white/5"
+            style={{ cursor: data.songUrl ? "pointer" : "default" }}
           >
-            {isPlaying ? "NOW PLAYING" : "LAST PLAYED"}
-          </span>
-        </div>
-        {data.title && (
-          <span
-            className="font-pixel text-[7px] truncate max-w-[52%]"
-            style={{ color: "var(--muted)" }}
-          >
-            {data.title}
-            {data.artist ? ` — ${data.artist}` : ""}
-          </span>
+            {data.albumArt && (
+              <img
+                src={data.albumArt}
+                alt=""
+                className="w-7 h-7 shrink-0 object-cover"
+                style={{ border: "1.5px solid var(--text)", borderRadius: "4px" }}
+              />
+            )}
+            <div className="flex flex-col min-w-0 overflow-hidden gap-0.5">
+              <div className="flex items-center gap-1.5">
+                <SpotifyIcon />
+                <span
+                  className="font-sans font-black uppercase shrink-0"
+                  style={{
+                    fontSize: "8px",
+                    letterSpacing: "0.12em",
+                    color: isPlaying ? "var(--accent)" : "var(--muted)",
+                  }}
+                >
+                  {isPlaying ? "NOW PLAYING" : "LAST PLAYED"}
+                </span>
+              </div>
+              <span
+                className="font-sans truncate"
+                style={{ fontSize: "9px", color: "var(--muted)" }}
+              >
+                <span style={{ fontWeight: 700, color: "var(--text)" }}>{data.title}</span>
+                {data.artist && <> · {data.artist}</>}
+                {data.album && <> · <span style={{ fontStyle: "italic" }}>{data.album}</span></>}
+              </span>
+            </div>
+          </a>
         )}
       </div>
-    </BrutalistCard>
+    </div>
   )
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// VISUALIZATION COMPONENTS (Brutalist style)
+// Click the top-right corner box to cycle between these three.
+// Each one responds to isPlaying — static when paused, animated when playing.
+// ══════════════════════════════════════════════════════════════════════
+
+// ── Viz 1: BRUTALIST BARS ─────────────────────────────────────────────
+// Thick, sharp-edged rectangular bars. No rounded corners. High contrast.
+// They slam up and down hard, not smooth — that's the brutalist feel.
+const BRUTAL_BAR_CONFIG = [
+  { min: 6, max: 28, dur: 0.40 },  // each entry: min height, max height, animation speed
+  { min: 14, max: 44, dur: 0.28 },
+  { min: 8, max: 36, dur: 0.50 },
+  { min: 20, max: 48, dur: 0.32 },
+  { min: 6, max: 30, dur: 0.44 },
+  { min: 16, max: 42, dur: 0.26 },
+]
+
+function BrutalistBarsViz({ isPlaying }: { isPlaying: boolean }) {
+  return (
+    <motion.div
+      className="flex items-end justify-center gap-[2px] w-full h-full"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.15 }}
+    >
+      {BRUTAL_BAR_CONFIG.map((bar, i) => (
+        <motion.div
+          key={i}
+          style={{
+            width: "6px",             /* wide bar, no rounded corners */
+            background: "var(--accent)",
+            borderRadius: "0px",      /* brutalist = no rounding */
+            transformOrigin: "bottom",
+          }}
+          animate={
+            isPlaying
+              ? {
+                /* fast, snappy up-down — "easeOut" makes it look like it slams */
+                height: [`${bar.min}px`, `${bar.max}px`, `${bar.min}px`],
+                opacity: [0.6, 1, 0.6],
+              }
+              : { height: `${bar.min}px`, opacity: 0.3 } // flat + dim when paused
+          }
+          transition={{
+            duration: bar.dur,
+            repeat: Infinity,
+            ease: "easeOut",      // sharp hit at top, fast drop
+            delay: i * 0.06,
+          }}
+        />
+      ))}
+    </motion.div>
+  )
+}
+
+// ── Viz 2: BRUTALIST BLOCKS ───────────────────────────────────────────
+// A single row of square blocks that blink and flash —
+// imagine an old LED level meter slamming on and off.
+function BrutalistBlockViz({ isPlaying }: { isPlaying: boolean }) {
+  // 3 rows × 4 cols = 12 LED "pixels"
+  const rows = 3
+  const cols = 4
+  const cells = Array.from({ length: rows * cols })
+
+  return (
+    <motion.div
+      className="flex flex-col-reverse gap-[2px] items-center justify-center w-full h-full"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.15 }}
+    >
+      {Array.from({ length: rows }).map((_, row) => (
+        <div key={row} className="flex gap-[2px]">
+          {Array.from({ length: cols }).map((_, col) => {
+            const idx = row * cols + col
+            return (
+              <motion.div
+                key={col}
+                style={{
+                  width: "5px",
+                  height: "5px",
+                  background: "var(--accent)",
+                  borderRadius: "0px", // sharp squares — no rounding
+                }}
+                animate={
+                  isPlaying
+                    ? {
+                      // each block flashes at a slightly different offset
+                      opacity: [0.15, 1, 0.15],
+                      scaleY: [0.4, 1, 0.4],
+                    }
+                    : { opacity: 0.1, scaleY: 0.4 }
+                }
+                transition={{
+                  duration: 0.5 + (idx % 3) * 0.15,
+                  repeat: Infinity,
+                  ease: "linear",
+                  delay: idx * 0.04,
+                }}
+              />
+            )
+          })}
+        </div>
+      ))}
+    </motion.div>
+  )
+}
+
+// ── Viz 3: BRUTALIST GRID PULSE ───────────────────────────────────────
+// A tight grid of squares that ripple outward from the center.
+// Harsh, geometric — no circles, no smooth curves.
+function BrutalistGridViz({ isPlaying }: { isPlaying: boolean }) {
+  const size = 4       // 4×4 grid
+  const cx = (size - 1) / 2  // centre x
+  const cy = (size - 1) / 2  // centre y
+
+  return (
+    <motion.div
+      className="flex items-center justify-center w-full h-full"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.15 }}
+    >
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: `repeat(${size}, 5px)`,
+          gap: "2px",
+        }}
+      >
+        {Array.from({ length: size * size }).map((_, i) => {
+          const row = Math.floor(i / size)
+          const col = i % size
+          // distance from centre — used to stagger the ripple delay
+          const dist = Math.abs(row - cy) + Math.abs(col - cx)
+
+          return (
+            <motion.div
+              key={i}
+              style={{
+                width: "5px",
+                height: "5px",
+                background: "var(--accent)",
+                borderRadius: "0px",
+              }}
+              animate={
+                isPlaying
+                  ? {
+                    opacity: [0.1, 1, 0.1],
+                    scale: [0.5, 1, 0.5],
+                  }
+                  : { opacity: 0.1, scale: 0.5 }
+              }
+              transition={{
+                duration: 0.8,
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: dist * 0.12, // cells further from centre pulse later
+              }}
+            />
+          )
+        })}
+      </div>
+    </motion.div>
+  )
+}
+
+// ── Fallback: shown when Spotify credentials are missing ───────────────
 function FallbackContent() {
   return (
     <BrutalistCard className="h-full flex flex-col justify-between" style={{ minHeight: "280px" }}>
@@ -189,6 +513,7 @@ function FallbackContent() {
   )
 }
 
+// ── Not-playing state ──────────────────────────────────────────────────
 function NotPlayingContent() {
   return (
     <BrutalistCard className="h-full flex flex-col justify-between" style={{ minHeight: "280px" }}>
@@ -219,6 +544,8 @@ function NotPlayingContent() {
   )
 }
 
+// ── Small icon components ──────────────────────────────────────────────
+// Pixel-art music note used in fallback / not-playing states
 function PixelNoteIcon({ color = "var(--text)" }: { color?: string }) {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style={{ imageRendering: "pixelated" }}>
@@ -230,6 +557,7 @@ function PixelNoteIcon({ color = "var(--text)" }: { color?: string }) {
   )
 }
 
+// Spotify logo used in the bottom bar
 function SpotifyIcon({ color = "var(--accent)" }: { color?: string }) {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
