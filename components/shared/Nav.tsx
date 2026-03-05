@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useTheme } from "@/lib/theme"
+import SpotifyWidget from "./SpotifyWidget"
 
 const NAV_LINKS = [
   { label: "ABOUT", href: "#about" },
@@ -59,6 +60,7 @@ export default function Nav() {
 
         {/* Desktop links */}
         <div className="hidden items-center gap-6 md:flex">
+          <SpotifyWidget />
           {NAV_LINKS.map((link) => (
             <button
               key={link.href}
@@ -132,6 +134,7 @@ export default function Nav() {
           className="fixed inset-0 z-40 flex flex-col items-center justify-center gap-8"
           style={{ backgroundColor: "#0a0a0a" }}
         >
+          <SpotifyWidget />
           {NAV_LINKS.map((link) => (
             <button
               key={link.href}

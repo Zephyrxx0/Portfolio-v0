@@ -80,53 +80,23 @@ export default function ProjectsSection() {
           PROJECTS
         </h2>
 
-        {/* Bento grid */}
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Card 1 — tall, spans 2 rows on desktop */}
-          <div
-            className="md:row-span-2"
-            style={{
-              opacity: visible ? 1 : 0,
-              transform: visible ? "translateY(0)" : "translateY(40px)",
-              transition: "all 600ms cubic-bezier(0.34, 1.56, 0.64, 1)",
-              transitionDelay: "0ms",
-            }}
-          >
-            <ProjectCard
-              project={projects[0]}
-              onEasterEgg={() => setShowEasterEgg(true)}
-            />
-          </div>
-
-          {/* Card 2 */}
-          <div
-            style={{
-              opacity: visible ? 1 : 0,
-              transform: visible ? "translateY(0)" : "translateY(40px)",
-              transition: "all 600ms cubic-bezier(0.34, 1.56, 0.64, 1)",
-              transitionDelay: "100ms",
-            }}
-          >
-            <ProjectCard
-              project={projects[1]}
-              onEasterEgg={() => setShowEasterEgg(true)}
-            />
-          </div>
-
-          {/* Card 3 */}
-          <div
-            style={{
-              opacity: visible ? 1 : 0,
-              transform: visible ? "translateY(0)" : "translateY(40px)",
-              transition: "all 600ms cubic-bezier(0.34, 1.56, 0.64, 1)",
-              transitionDelay: "200ms",
-            }}
-          >
-            <ProjectCard
-              project={projects[2]}
-              onEasterEgg={() => setShowEasterEgg(true)}
-            />
-          </div>
+        {/* 2-column × 3-row grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12">
+          {projects.map((project, idx) => (
+            <div
+              key={project.slug}
+              style={{
+                opacity: visible ? 1 : 0,
+                transform: visible ? "translateY(0)" : "translateY(60px)",
+                transition: `all 800ms cubic-bezier(0.34, 1.56, 0.64, 1) ${idx * 120}ms`,
+              }}
+            >
+              <ProjectCard
+                project={project}
+                onEasterEgg={() => setShowEasterEgg(true)}
+              />
+            </div>
+          ))}
         </div>
       </div>
 

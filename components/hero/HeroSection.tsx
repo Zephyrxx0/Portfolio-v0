@@ -2,16 +2,16 @@
 
 import { useEffect, useRef, useState } from "react"
 import dynamic from "next/dynamic"
-import PacManCanvas from "./PacManCanvas"
-import ParticleField from "./ParticleField"
+import { useTheme } from "@/lib/theme"
 
-const ThreeBackground = dynamic(() => import("./ThreeBackground"), { ssr: false })
+const IsometricTerrain = dynamic(() => import("./IsometricTerrain"), { ssr: false })
 
 export default function HeroSection() {
   const nameRef = useRef<HTMLHeadingElement>(null)
   const [loaded, setLoaded] = useState(false)
   const [zephyrWalking, setZephyrWalking] = useState(false)
   const keyBuffer = useRef<string[]>([])
+  const { theme } = useTheme()
 
   // Letter animation on load
   useEffect(() => {
@@ -38,9 +38,7 @@ export default function HeroSection() {
   return (
     <section id="hero" className="relative flex min-h-screen items-center justify-center overflow-hidden">
       {/* Background layers */}
-      <ThreeBackground />
-      <PacManCanvas />
-      <ParticleField />
+      <IsometricTerrain key={theme} />
 
       {/* Content layer */}
       <div className="relative z-10 flex flex-col items-center gap-6 px-6 text-center">
@@ -158,12 +156,12 @@ export default function HeroSection() {
       {/* ZEPHYR easter egg sprite */}
       {zephyrWalking && (
         <div
-          className="fixed bottom-[10vh] z-50"
+          className="fixed bottom-[10vh] z-50 pointer-events-none"
           style={{
-            animation: "zephyrWalk 3s linear forwards",
+            animation: "zephyrWalk 6s linear forwards",
           }}
         >
-          <ZephyrSprite />
+          <KnightSprite />
         </div>
       )}
 
@@ -177,7 +175,7 @@ export default function HeroSection() {
   )
 }
 
-function ZephyrSprite() {
+function KnightSprite() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -186,42 +184,54 @@ function ZephyrSprite() {
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    const size = 4
+    const size = 3
     let frame = 0
 
-    // Simple pixel character frames
+    // Pixel Knight frames
     const frames = [
-      // Frame 0: standing left leg
+      // Frame 0: walking left leg
       [
-        [0,0,1,1,1,1,0,0],
-        [0,1,1,1,1,1,1,0],
-        [0,1,0,1,1,0,1,0],
-        [0,1,1,1,1,1,1,0],
-        [0,0,1,1,1,1,0,0],
-        [0,0,0,1,1,0,0,0],
-        [0,0,1,0,0,1,0,0],
-        [0,1,0,0,0,0,1,0],
+        [0, 0, 0, 1, 1, 1, 1, 0, 0],
+        [0, 0, 1, 2, 2, 2, 1, 1, 0],
+        [0, 1, 2, 3, 2, 1, 4, 1, 0],
+        [0, 1, 2, 2, 2, 1, 1, 1, 1],
+        [0, 0, 1, 1, 1, 1, 1, 4, 1],
+        [0, 0, 1, 5, 5, 1, 1, 1, 0],
+        [0, 1, 5, 5, 5, 5, 1, 0, 0],
+        [1, 5, 5, 1, 1, 5, 5, 1, 0],
+        [1, 5, 1, 0, 0, 1, 5, 1, 0],
+        [0, 1, 1, 0, 0, 1, 1, 0, 0],
+        [0, 0, 0, 0, 0, 1, 0, 0, 0],
+        [0, 0, 0, 0, 0, 1, 1, 0, 0],
       ],
-      // Frame 1: standing right leg
+      // Frame 1: walking right leg
       [
-        [0,0,1,1,1,1,0,0],
-        [0,1,1,1,1,1,1,0],
-        [0,1,0,1,1,0,1,0],
-        [0,1,1,1,1,1,1,0],
-        [0,0,1,1,1,1,0,0],
-        [0,0,0,1,1,0,0,0],
-        [0,0,0,1,1,0,0,0],
-        [0,0,1,0,0,1,0,0],
+        [0, 0, 0, 1, 1, 1, 1, 0, 0],
+        [0, 0, 1, 2, 2, 2, 1, 1, 0],
+        [0, 1, 2, 3, 2, 1, 4, 1, 0],
+        [0, 1, 2, 2, 2, 1, 1, 1, 1],
+        [0, 0, 1, 1, 1, 1, 1, 4, 1],
+        [0, 0, 1, 5, 5, 1, 1, 1, 0],
+        [0, 1, 5, 5, 5, 5, 1, 0, 0],
+        [1, 5, 5, 1, 1, 5, 5, 1, 0],
+        [1, 5, 1, 0, 0, 1, 5, 1, 0],
+        [0, 1, 1, 0, 0, 1, 1, 0, 0],
+        [0, 1, 0, 0, 0, 0, 0, 0, 0],
+        [0, 1, 1, 0, 0, 0, 0, 0, 0],
       ],
     ]
 
+    const colors = ["#000000", "#1a1c2c", "#5d275d", "#b13e53", "#ef7d57", "#ffcd75"]
+    // 1: outline, 2: helm, 3: visor, 4: sword/shield trim, 5: body armor
+
     const drawFrame = () => {
-      ctx.clearRect(0, 0, 32, 32)
+      ctx.clearRect(0, 0, 32, 36)
       const f = frames[frame % 2]
-      for (let y = 0; y < 8; y++) {
-        for (let x = 0; x < 8; x++) {
-          if (f[y][x]) {
-            ctx.fillStyle = "#00ff9d"
+      for (let y = 0; y < 12; y++) {
+        for (let x = 0; x < 9; x++) {
+          const val = f[y][x]
+          if (val > 0) {
+            ctx.fillStyle = colors[val] || "#fff"
             ctx.fillRect(x * size, y * size, size, size)
           }
         }
@@ -232,7 +242,7 @@ function ZephyrSprite() {
     const interval = setInterval(() => {
       frame++
       drawFrame()
-    }, 200)
+    }, 250)
 
     return () => clearInterval(interval)
   }, [])
@@ -240,9 +250,9 @@ function ZephyrSprite() {
   return (
     <canvas
       ref={canvasRef}
-      width={32}
-      height={32}
-      style={{ width: 48, height: 48, imageRendering: "pixelated" }}
+      width={27}
+      height={36}
+      style={{ width: 81, height: 108, imageRendering: "pixelated" }}
     />
   )
 }

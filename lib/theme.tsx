@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
 
-type Theme = "dark" | "earthy"
+type Theme = "dark" | "light"
 
 interface ThemeContextType {
   theme: Theme
@@ -11,7 +11,7 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType>({
   theme: "dark",
-  toggleTheme: () => {},
+  toggleTheme: () => { },
 })
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -19,19 +19,19 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const saved = localStorage.getItem("zephyr-theme") as Theme
-    if (saved === "earthy") {
-      setTheme("earthy")
-      document.documentElement.classList.add("theme-earthy")
+    if (saved === "light") {
+      setTheme("light")
+      document.documentElement.classList.add("theme-light")
     }
   }, [])
 
   const toggleTheme = useCallback(() => {
     setTheme((prev) => {
-      const next = prev === "dark" ? "earthy" : "dark"
-      if (next === "earthy") {
-        document.documentElement.classList.add("theme-earthy")
+      const next = prev === "dark" ? "light" : "dark"
+      if (next === "light") {
+        document.documentElement.classList.add("theme-light")
       } else {
-        document.documentElement.classList.remove("theme-earthy")
+        document.documentElement.classList.remove("theme-light")
       }
       localStorage.setItem("zephyr-theme", next)
       return next
