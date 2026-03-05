@@ -125,6 +125,7 @@ export interface NowPlayingData {
     title?: string
     album?: string
     albumArt?: string
+    artist?: string
   }
 }
 
@@ -158,10 +159,12 @@ function extractPrevTrack(item: Record<string, unknown> | undefined) {
   if (!item) return undefined
   const album = item.album as Record<string, unknown> | undefined
   const images = album?.images as Array<{ url: string }> | undefined
+  const artists = item.artists as Array<{ name: string }> | undefined
   return {
     title: item.name as string | undefined,
     album: album?.name as string | undefined,
     albumArt: images?.[0]?.url,
+    artist: artists?.map((a) => a.name).join(", "),
   }
 }
 

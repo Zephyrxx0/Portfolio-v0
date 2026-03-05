@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import BrutalistCard from "../shared/BrutalistCard"
 
@@ -17,23 +17,64 @@ interface NowPlayingData {
     title?: string
     album?: string
     albumArt?: string
+    artist?: string
   }
 }
 
 // The three visualization styles the user can cycle through by clicking
 type VizMode = "bars" | "waveform" | "sphere"
 
+const LS_KEY = "sp_last_played"
+
+function readLocalLastPlayed(): NowPlayingData["prev"] | null {
+  try {
+    const raw = localStorage.getItem(LS_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+function writeLocalLastPlayed(track: NowPlayingData["prev"]) {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(track))
+  } catch {}
+}
+
 // ── Root component ─────────────────────────────────────────────────────
 // Fetches Spotify data every 30 seconds and picks which view to show
 export default function SpotifyNowPlaying() {
   const [data, setData] = useState<NowPlayingData | null>(null)
   const [hasCredentials, setHasCredentials] = useState(true)
+  // Persisted fallback: last-seen song stored in localStorage so it survives
+  // page refreshes when the Spotify recently-played API is unavailable.
+  const [clientLastPlayed, setClientLastPlayed] = useState<NowPlayingData["prev"] | null>(null)
+  const prevDataRef = useRef<NowPlayingData | null>(null)
+
+  // Load persisted last-played on mount (client only)
+  useEffect(() => {
+    setClientLastPlayed(readLocalLastPlayed())
+  }, [])
 
   useEffect(() => {
     const fetchNowPlaying = async () => {
       try {
         const res = await fetch("/api/now-playing", { cache: "no-store" })
         const json: NowPlayingData = await res.json()
+
+        // When the track changes, persist the old track as "last played"
+        const prev = prevDataRef.current
+        if (prev?.title && json.title !== prev.title) {
+          const lastPlayed = {
+            title: prev.title,
+            artist: prev.artist,
+            albumArt: prev.albumArt,
+            album: prev.album,
+          }
+          setClientLastPlayed(lastPlayed)
+          writeLocalLastPlayed(lastPlayed)
+        }
+        prevDataRef.current = json
         setData(json)
       } catch {
         // If the API call fails entirely, hide the card
@@ -49,7 +90,9 @@ export default function SpotifyNowPlaying() {
   if (!hasCredentials || !data) return <FallbackContent />
   if (!data.isPlaying && !data.title) return <NotPlayingContent />
 
-  return <NowPlayingCard data={data} />
+  // Prefer the API-provided prev; fall back to persisted client-side prev
+  const effectivePrev = data.prev ?? clientLastPlayed
+  return <NowPlayingCard data={{ ...data, prev: effectivePrev ?? undefined }} />
 }
 
 // ── Main card layout ───────────────────────────────────────────────────
@@ -65,7 +108,7 @@ function NowPlayingCard({ data }: { data: NowPlayingData }) {
 
   return (
     <div
-      className="relative h-full flex flex-col overflow-hidden"
+      className="relative flex flex-col overflow-hidden"
       style={{
         border: "3px solid var(--text)",
         boxShadow: "4px 4px 0 var(--shadow)",
@@ -73,16 +116,17 @@ function NowPlayingCard({ data }: { data: NowPlayingData }) {
       }}
     >
       {/* ── Top section: intrinsic-ratio container so height is ALWAYS tied to width ── */}
-      {/* padding-bottom: 76% means height = 76% of width = same as album art square.      */}
+      {/* padding-bottom: 84% increases the overall height and scales the album art. */}
       {/* Both columns are absolutely positioned inside, so text can NEVER push the height. */}
-      <div className="relative" style={{ paddingBottom: "76%", borderBottom: "3px solid var(--text)" }}>
+      <div className="relative" style={{ paddingBottom: "84%", borderBottom: "3px solid var(--text)" }}>
 
-        {/* ── LEFT: Album art — absolute, fills left 76% ── */}
+        {/* ── LEFT: Album art — absolute, fills left 84% ── */}
         <div
           className="absolute top-0 left-0 bottom-0 overflow-hidden"
           style={{
-            width: "76%",
+            width: "84%",
             borderRight: "3px solid var(--text)",
+            padding: "3px", // provides the 1-2px margin/gap look
           }}
         >
           {data.albumArt ? (
@@ -90,16 +134,17 @@ function NowPlayingCard({ data }: { data: NowPlayingData }) {
               src={data.albumArt}
               alt={data.album ?? "Album art"}
               className="w-full h-full object-cover"
+              style={{ borderRadius: "8px" }} // inner rounding inside the harsh border
             />
           ) : (
-            <div className="absolute inset-0 flex items-center justify-center" style={{ background: "var(--bg2)" }}>
+            <div className="w-full h-full flex items-center justify-center" style={{ background: "var(--bg2)", borderRadius: "8px" }}>
               <PixelNoteIcon color="#333" />
             </div>
           )}
         </div>
 
-        {/* ── RIGHT: narrow column — absolute, fills right 24% ── */}
-        <div className="absolute top-0 right-0 bottom-0 flex flex-col overflow-hidden" style={{ width: "24%" }}>
+        {/* ── RIGHT: narrow column — absolute, fills right 16% ── */}
+        <div className="absolute top-0 right-0 bottom-0 flex flex-col overflow-hidden" style={{ width: "16%" }}>
 
           {/* Visualization panel */}
           <button
@@ -200,59 +245,50 @@ function NowPlayingCard({ data }: { data: NowPlayingData }) {
       <div
         className="flex shrink-0 overflow-hidden"
         style={{
-          borderTop: "0px",
-          padding: "6px 6px 6px 0",
+          borderTop: "3px solid var(--text)",
+          height: "68px", // Shrunk from 90px to remove whitespace
+          padding: "2px", // 2px margin look as requested
         }}
       >
         {data.prev ? (
           // ── Has prev track data ──
-          <div
-            className="flex w-full overflow-hidden"
-            style={{
-              borderRadius: "14px",
-            }}
-          >
+          <div className="flex w-full overflow-hidden h-full">
             {data.prev.albumArt && (
               <img
                 src={data.prev.albumArt}
                 alt=""
                 className="shrink-0 object-cover"
                 style={{
-                  width: "80px",
-                  height: "80px",
-                  margin: "6px 6px 6px 0",
-                  borderRadius: "10px",
+                  height: "98%%",
+                  aspectRatio: "1 / 1",
                   flexShrink: 0,
-                  alignSelf: "center",
                 }}
               />
             )}
-            <div className="flex flex-col justify-center min-w-0 overflow-hidden px-3 py-2 gap-0.5">
+            <div className="flex flex-col justify-center min-w-0 overflow-hidden px-3 gap-0">
+              <div className="flex items-center gap-1.5 mb-1">
+                <SpotifyIcon />
+                <span
+                  className="font-sans font-black uppercase shrink-0"
+                  style={{ fontSize: "8px", letterSpacing: "0.12em", color: "var(--muted)" }}
+                >
+                  LAST PLAYED
+                </span>
+              </div>
               <span
                 className="font-sans truncate uppercase leading-none"
-                style={{ fontSize: "20px", fontWeight: 900, color: "var(--text)", letterSpacing: "0.02em" }}
+                style={{ fontSize: "18px", fontWeight: 900, color: "var(--text)", letterSpacing: "-0.01em" }}
                 title={data.prev.title}
               >
                 {data.prev.title}
               </span>
-              {data.prev.album && (
-                <span
-                  className="font-sans truncate leading-snug"
-                  style={{ fontSize: "13px", fontWeight: 600, fontStyle: "italic", color: "var(--text)", opacity: 0.75 }}
-                  title={data.prev.album}
-                >
-                  {data.prev.album}
-                </span>
-              )}
-              {data.prev.artist && (
-                <span
-                  className="font-sans truncate leading-snug"
-                  style={{ fontSize: "10px", fontWeight: 400, color: "var(--muted)" }}
-                  title={data.prev.artist}
-                >
-                  {data.prev.artist}
-                </span>
-              )}
+              <span
+                className="font-sans truncate leading-none mt-1"
+                style={{ fontSize: "11px", fontWeight: 500, color: "var(--muted)" }}
+                title={data.prev.artist}
+              >
+                {data.prev.artist}{data.prev.album ? ` · ${data.prev.album}` : ""}
+              </span>
             </div>
           </div>
         ) : (
@@ -261,10 +297,9 @@ function NowPlayingCard({ data }: { data: NowPlayingData }) {
             href={data.songUrl ?? "#"}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex w-full overflow-hidden transition-colors hover:bg-black/5"
+            className="flex w-full h-full overflow-hidden transition-colors hover:bg-black/5"
             style={{
               cursor: data.songUrl ? "pointer" : "default",
-              borderRadius: "14px",
             }}
           >
             {data.albumArt && (
@@ -273,41 +308,38 @@ function NowPlayingCard({ data }: { data: NowPlayingData }) {
                 alt=""
                 className="shrink-0 object-cover"
                 style={{
-                  width: "80px",
-                  height: "80px",
-                  margin: "6px 6px 6px 0",
-                  borderRadius: "10px",
+                  height: "100%",
+                  aspectRatio: "1 / 1",
+                  borderRadius: "8px",
                   flexShrink: 0,
-                  alignSelf: "center",
+                  padding: "2px",
+                  boxSizing: "border-box",
                 }}
               />
             )}
-            <div className="flex flex-col justify-center min-w-0 overflow-hidden px-3 py-2 gap-0.5">
+            <div className="flex flex-col justify-center min-w-0 overflow-hidden px-3 gap-0">
+              <div className="flex items-center gap-1.5 mb-1">
+                <SpotifyIcon />
+                <span
+                  className="font-sans font-black uppercase shrink-0"
+                  style={{ fontSize: "8px", letterSpacing: "0.12em", color: isPlaying ? "var(--accent)" : "var(--muted)" }}
+                >
+                  {isPlaying ? "NOW PLAYING" : "LAST PLAYED"}
+                </span>
+              </div>
               <span
                 className="font-sans truncate uppercase leading-none"
-                style={{ fontSize: "20px", fontWeight: 900, color: "var(--text)", letterSpacing: "0.02em" }}
+                style={{ fontSize: "18px", fontWeight: 900, color: "var(--text)", letterSpacing: "-0.01em" }}
                 title={data.title}
               >
                 {data.title}
               </span>
-              {data.album && (
-                <span
-                  className="font-sans truncate leading-snug"
-                  style={{ fontSize: "13px", fontWeight: 600, fontStyle: "italic", color: "var(--text)", opacity: 0.75 }}
-                  title={data.album}
-                >
-                  {data.album}
-                </span>
-              )}
-              {data.artist && (
-                <span
-                  className="font-sans truncate leading-snug"
-                  style={{ fontSize: "10px", fontWeight: 400, color: "var(--muted)" }}
-                  title={data.artist}
-                >
-                  {data.artist}
-                </span>
-              )}
+              <span
+                className="font-sans truncate leading-none mt-1"
+                style={{ fontSize: "11px", fontWeight: 600, color: "var(--muted)" }}
+              >
+                {data.artist} {data.album ? `· ${data.album}` : ""}
+              </span>
             </div>
           </a>
         )}
