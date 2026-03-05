@@ -72,23 +72,16 @@ function NowPlayingCard({ data }: { data: NowPlayingData }) {
         background: "#0a0a0a",
       }}
     >
-      {/* ── Top section: album art (big left) + right column (narrow) ── */}
-      {/*
-        KEY TRICK: we do NOT use flex-1 here.
-        Instead, the LEFT column has a fixed width + aspect-ratio:1/1 + flex-shrink:0.
-        This means the LEFT column's width forces its own height (width = height = square).
-        That height then defines the row height, which the RIGHT column stretches to fill.
-        If we used flex-1 the parent would control height, breaking the square.
-      */}
-      <div className="flex" style={{ borderBottom: "3px solid var(--text)" }}>
+      {/* ── Top section: intrinsic-ratio container so height is ALWAYS tied to width ── */}
+      {/* padding-bottom: 76% means height = 76% of width = same as album art square.      */}
+      {/* Both columns are absolutely positioned inside, so text can NEVER push the height. */}
+      <div className="relative" style={{ paddingBottom: "76%", borderBottom: "3px solid var(--text)" }}>
 
-        {/* ── LEFT: Album art — width drives height to make a true square ── */}
+        {/* ── LEFT: Album art — absolute, fills left 76% ── */}
         <div
-          className="relative overflow-hidden"
+          className="absolute top-0 left-0 bottom-0 overflow-hidden"
           style={{
-            width: "76%",           /* takes most of the card width */
-            aspectRatio: "1 / 1",   /* height = width → always a perfect square */
-            flexShrink: 0,          /* don't let flex squish this — it must stay square */
+            width: "76%",
             borderRight: "3px solid var(--text)",
           }}
         >
@@ -96,7 +89,7 @@ function NowPlayingCard({ data }: { data: NowPlayingData }) {
             <img
               src={data.albumArt}
               alt={data.album ?? "Album art"}
-              className="absolute inset-0 w-full h-full object-cover"
+              className="w-full h-full object-cover"
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center" style={{ background: "#1a1a1a" }}>
@@ -105,20 +98,17 @@ function NowPlayingCard({ data }: { data: NowPlayingData }) {
           )}
         </div>
 
-        {/* ── RIGHT: narrow column, stretches to match the square's height ── */}
-        {/* overflow:hidden is critical — prevents long vertical text from pushing row taller than the art */}
-        <div className="flex flex-col" style={{ flex: 1, alignSelf: "stretch", overflow: "hidden" }}>
+        {/* ── RIGHT: narrow column — absolute, fills right 24% ── */}
+        <div className="absolute top-0 right-0 bottom-0 flex flex-col overflow-hidden" style={{ width: "24%" }}>
 
-          {/* Visualization panel — takes ALL remaining height in the right column */}
-          {/* The viz fills flex-1 so it uses every pixel not claimed by the text rows */}
-          {/* Viz square: width = 100% of the right column, height = width via aspect-ratio */}
+          {/* Visualization panel */}
           <button
             onClick={cycleViz}
             className="flex items-center justify-center cursor-pointer transition-colors hover:bg-white/5"
             style={{
-              width: "100%",            /* fill the column width */
-              aspectRatio: "1 / 1",     /* height = width → perfect square */
-              flexShrink: 0,            /* don't let it shrink */
+              width: "100%",
+              aspectRatio: "1 / 1",
+              flexShrink: 0,
               borderBottom: "3px solid var(--text)",
               padding: 0,
             }}
@@ -131,80 +121,72 @@ function NowPlayingCard({ data }: { data: NowPlayingData }) {
             </AnimatePresence>
           </button>
 
-          {/* ── Song info: three vertical texts as compact as possible ── */}
-          {/* gap-0 = no spacing between text columns; they sit right next to each other */}
-          <div className="flex items-center justify-center overflow-hidden shrink-0" style={{ padding: 0, gap: 0 }}>
+          {/* texts anchored to bottom of the remaining space */}
+          <div className="flex flex-1 items-end overflow-hidden min-h-0" style={{ padding: 0, gap: 0 }}>
 
-            {/* SONG NAME — largest, heaviest weight */}
-            <div className="flex-1 flex items-center justify-center overflow-hidden">
-              <span
-                className="font-sans uppercase leading-none"
-                style={{
-                  writingMode: "vertical-rl",
-                  transform: "rotate(180deg)",
-                  fontSize: "clamp(15px, 2.2vw, 22px)",
-                  fontWeight: 900,
-                  color: "var(--text)",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                  maxHeight: "100%",
-                  letterSpacing: "0.06em",
-                }}
-                title={data.title}
-              >
-                {/* Truncate title at 14 chars — vertical text can't use CSS ellipsis reliably */}
-                {data.title && data.title.length > 14 ? data.title.slice(0, 14) + "…" : data.title}
-              </span>
-            </div>
+            {/* SONG NAME — 50% of section width */}
+            <span
+              className="font-sans uppercase leading-none"
+              style={{
+                writingMode: "vertical-rl",
+                transform: "rotate(180deg)",
+                fontSize: "clamp(22px, 2.8vw, 40px)",
+                fontWeight: 900,
+                color: "var(--text)",
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+                maxHeight: "100%",
+                textOverflow: "ellipsis",
+                letterSpacing: "0.04em",
+                flexShrink: 0,
+              }}
+              title={data.title}
+            >
+              {data.title}
+            </span>
 
-            {/* ALBUM — medium size, italic */}
-            <div className="flex items-center justify-center overflow-hidden">
-              <span
-                className="font-sans leading-none"
-                style={{
-                  writingMode: "vertical-rl",
-                  transform: "rotate(180deg)",
-                  fontSize: "clamp(9px, 1.3vw, 12px)",
-                  fontWeight: 600,
-                  fontStyle: "italic",
-                  color: "var(--text)",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                  maxHeight: "100%",
-                  letterSpacing: "0.04em",
-                  opacity: 0.7,
-                }}
-                title={data.album}
-              >
-                {/* Truncate album at 18 chars */}
-                {data.album && data.album.length > 18 ? data.album.slice(0, 18) + "…" : data.album}
-              </span>
-            </div>
+            {/* ALBUM — 35% of section width */}
+            <span
+              className="font-sans leading-none"
+              style={{
+                writingMode: "vertical-rl",
+                transform: "rotate(180deg)",
+                fontSize: "clamp(17px, 2.2vw, 20px)",
+                fontWeight: 800,
+                color: "var(--text)",
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+                maxHeight: "100%",
+                textOverflow: "ellipsis",
+                letterSpacing: "0.03em",
+                opacity: 0.7,
+                flexShrink: 0,
+              }}
+              title={data.album}
+            >
+              {data.album}
+            </span>
 
-            {/* ARTIST — smallest, lightest weight */}
-            <div className="flex items-center justify-center overflow-hidden">
-              <span
-                className="font-sans leading-none"
-                style={{
-                  writingMode: "vertical-rl",
-                  transform: "rotate(180deg)",
-                  fontSize: "clamp(7px, 0.9vw, 9px)",
-                  fontWeight: 300,
-                  color: "var(--muted)",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                  maxHeight: "100%",
-                  letterSpacing: "0.03em",
-                }}
-                title={data.artist}
-              >
-                {/* Truncate artist at 14 chars */}
-                {data.artist && data.artist.length > 14 ? data.artist.slice(0, 14) + "…" : data.artist}
-              </span>
-            </div>
+            {/* ARTIST — 15% of section width */}
+            <span
+              className="font-sans leading-none"
+              style={{
+                writingMode: "vertical-rl",
+                transform: "rotate(180deg)",
+                fontSize: "clamp(12px, 1.5vw, 15px)",
+                fontWeight: 700,
+                color: "var(--muted)",
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+                maxHeight: "100%",
+                textOverflow: "ellipsis",
+                letterSpacing: "0.03em",
+                flexShrink: 0,
+              }}
+              title={data.artist}
+            >
+              {data.artist}
+            </span>
           </div>
         </div>
       </div>
