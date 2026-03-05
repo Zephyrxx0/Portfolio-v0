@@ -189,9 +189,13 @@ export async function getNowPlaying(): Promise<NowPlayingData> {
     const cpData = await cpRes.json()
     const track = extractTrack(cpData)
     if (track) {
-      // Currently playing: prev = most recent in recently-played (items[0])
+      // Currently playing: prev = the track before this one in recently-played.
+      // items[0] is often the same as the current track, so skip it if titles match.
       const rpData = await rpPromise
-      track.prev = extractPrevTrack(rpData?.items?.[0]?.track)
+      const rp0 = rpData?.items?.[0]?.track
+      const rp1 = rpData?.items?.[1]?.track
+      const isSameSong = rp0?.name === track.title
+      track.prev = extractPrevTrack(isSameSong ? rp1 : rp0)
       return track
     }
   } else if (cpRes.status === 401) {
@@ -223,7 +227,10 @@ export async function getNowPlaying(): Promise<NowPlayingData> {
     const track = extractTrack(psData)
     if (track) {
       const rpData = await rpPromise
-      track.prev = extractPrevTrack(rpData?.items?.[0]?.track)
+      const rp0 = rpData?.items?.[0]?.track
+      const rp1 = rpData?.items?.[1]?.track
+      const isSameSong = rp0?.name === track.title
+      track.prev = extractPrevTrack(isSameSong ? rp1 : rp0)
       return track
     }
   }
