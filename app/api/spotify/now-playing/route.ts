@@ -7,7 +7,11 @@ export const revalidate = 0
 export async function GET() {
   try {
     const data = await getNowPlaying()
-    return NextResponse.json(data)
+    return NextResponse.json(data, {
+      headers: {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+      },
+    })
   } catch (error) {
     console.error("Error in spotify route:", error)
     return NextResponse.json({ isPlaying: false }, { status: 500 })

@@ -11,7 +11,7 @@ export default function SpotifyWidget() {
     useEffect(() => {
         const fetchNowPlaying = async () => {
             try {
-                const res = await fetch("/api/spotify/now-playing")
+                const res = await fetch("/api/spotify/now-playing", { cache: "no-store" })
                 const json = await res.json()
                 setData(json)
             } catch (error) {
@@ -27,7 +27,7 @@ export default function SpotifyWidget() {
         return () => clearInterval(interval)
     }, [])
 
-    if (loading || !data?.isPlaying) {
+    if (loading || !data?.title) {
         return (
             <div className="flex items-center gap-2 border-2 border-[var(--border)] bg-[var(--bg)] px-3 py-1 font-jetbrains text-xs text-[var(--muted)]">
                 <span className="h-2 w-2 rounded-full bg-[var(--muted)] animate-pulse" />
@@ -62,21 +62,31 @@ export default function SpotifyWidget() {
                 </span>
             </div>
             <div className="ml-1 flex h-4 w-4 shrink-0 items-end justify-between gap-[2px]">
-                <motion.span
-                    className="w-[3px] bg-[var(--accent)]"
-                    animate={{ height: ["4px", "12px", "4px"] }}
-                    transition={{ duration: 1, repeat: Infinity, delay: 0 }}
-                />
-                <motion.span
-                    className="w-[3px] bg-[var(--accent)]"
-                    animate={{ height: ["8px", "16px", "8px"] }}
-                    transition={{ duration: 0.8, repeat: Infinity, delay: 0.2 }}
-                />
-                <motion.span
-                    className="w-[3px] bg-[var(--accent)]"
-                    animate={{ height: ["6px", "10px", "6px"] }}
-                    transition={{ duration: 1.2, repeat: Infinity, delay: 0.4 }}
-                />
+                {data.isPlaying ? (
+                    <>
+                        <motion.span
+                            className="w-[3px] bg-[var(--accent)]"
+                            animate={{ height: ["4px", "12px", "4px"] }}
+                            transition={{ duration: 1, repeat: Infinity, delay: 0 }}
+                        />
+                        <motion.span
+                            className="w-[3px] bg-[var(--accent)]"
+                            animate={{ height: ["8px", "16px", "8px"] }}
+                            transition={{ duration: 0.8, repeat: Infinity, delay: 0.2 }}
+                        />
+                        <motion.span
+                            className="w-[3px] bg-[var(--accent)]"
+                            animate={{ height: ["6px", "10px", "6px"] }}
+                            transition={{ duration: 1.2, repeat: Infinity, delay: 0.4 }}
+                        />
+                    </>
+                ) : (
+                    <>
+                        <span className="w-[3px] bg-[var(--muted)]" style={{ height: "4px" }} />
+                        <span className="w-[3px] bg-[var(--muted)]" style={{ height: "8px" }} />
+                        <span className="w-[3px] bg-[var(--muted)]" style={{ height: "6px" }} />
+                    </>
+                )}
             </div>
         </motion.a>
     )
