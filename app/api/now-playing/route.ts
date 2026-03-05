@@ -12,7 +12,8 @@ export async function GET() {
         "Cache-Control": "public, s-maxage=30, stale-while-revalidate=15",
       },
     })
-  } catch {
-    return NextResponse.json({ isPlaying: false })
+  } catch (err) {
+    console.error("Spotify API Error:", err)
+    return NextResponse.json({ isPlaying: false, error: String(err) })
   }
 }

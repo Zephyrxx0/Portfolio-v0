@@ -43,7 +43,7 @@ export default function PacManCanvas() {
     canvas.height = h
 
     const darkColors = ["#00cfff", "#ff6b9d", "#00ff9d", "#ffcf00"]
-    const earthyColors = ["#c84b00", "#8b6914", "#a0522d", "#cd853f"]
+    const lightColors = ["#c84b00", "#8b6914", "#a0522d", "#cd853f"]
 
     // Initialize ghosts
     const ghosts: Ghost[] = Array.from({ length: 4 }, (_, i) => ({
@@ -62,7 +62,7 @@ export default function PacManCanvas() {
 
     const drawGhost = (g: Ghost) => {
       const size = 16 * 3 // 16px scaled 3x
-      const colors = themeRef.current === "dark" ? darkColors : earthyColors
+      const colors = themeRef.current === "dark" ? darkColors : lightColors
       const fillColor = g.frightened ? "#2121de" : colors[ghosts.indexOf(g) % colors.length]
 
       ctx.fillStyle = fillColor

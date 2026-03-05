@@ -1,6 +1,6 @@
 "use client"
-
 import { useEffect, useState } from "react"
+import BrutalistCard from "../shared/BrutalistCard"
 
 interface NowPlayingData {
   isPlaying: boolean
@@ -31,149 +31,211 @@ export default function SpotifyNowPlaying() {
     return () => clearInterval(interval)
   }, [])
 
-  // No credentials or no data yet — show fallback
-  if (!hasCredentials || !data) {
-    return <FallbackContent />
-  }
+  if (!hasCredentials || !data) return <FallbackContent />
+  if (!data.isPlaying && !data.title) return <NotPlayingContent />
 
-  // Not currently playing
-  if (!data.isPlaying) {
-    return (
-      <div className="flex flex-col gap-3">
-        {/* Static equalizer */}
-        <div className="flex items-end gap-1.5 h-8">
-          {[6, 10, 4, 8, 5].map((h, i) => (
-            <div
-              key={i}
-              className="w-2"
-              style={{
-                height: h,
-                background: "var(--muted)",
-                opacity: 0.4,
-              }}
-            />
-          ))}
-        </div>
-        <p
-          className="text-[8px] tracking-wider"
-          style={{ fontFamily: "var(--font-press-start)", color: "var(--muted)" }}
-        >
-          NOT PLAYING
-        </p>
-        <p
-          className="italic text-sm"
-          style={{ fontFamily: "var(--font-playfair)", color: "var(--muted)" }}
-        >
-          {"\"Lo-fi, OSTs, and anything with a good beat.\""}
-        </p>
-      </div>
-    )
-  }
+  return <NowPlayingCard data={data} />
+}
 
-  // Currently playing
+function NowPlayingCard({ data }: { data: NowPlayingData }) {
+  const isPlaying = data.isPlaying
+
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-3">
-        {/* Album art */}
-        {data.albumArt && (
-          <a
-            href={data.songUrl || "#"}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-shrink-0"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+    <BrutalistCard
+      className="relative h-full overflow-hidden flex flex-col"
+      style={{ padding: 0, minHeight: "280px" }}
+      hoverable={false}
+    >
+      {/* ── Main area: album art (left) + info column (right) ── */}
+      <div className="flex flex-1 min-h-0" style={{ borderBottom: "3px solid var(--border)" }}>
+
+        {/* Left: Album art */}
+        <div
+          className="flex-1 p-3 flex items-center justify-center"
+          style={{ borderRight: "3px solid var(--border)" }}
+        >
+          {data.albumArt ? (
             <img
               src={data.albumArt}
-              alt={`Album art for ${data.album || data.title}`}
-              width={56}
-              height={56}
-              className="block"
-              style={{
-                border: "2px solid var(--text)",
-                imageRendering: "auto",
-              }}
+              alt={data.album ?? "Album Art"}
+              className="w-full h-full object-cover"
+              style={{ border: "3px solid var(--border)", borderRadius: "6px" }}
             />
-          </a>
-        )}
+          ) : (
+            <div
+              className="w-full h-full flex items-center justify-center"
+              style={{ border: "3px solid var(--border)", borderRadius: "6px", background: "var(--bg)" }}
+            >
+              <PixelNoteIcon color="var(--muted)" />
+            </div>
+          )}
+        </div>
 
-        {/* Track info */}
-        <div className="flex flex-col gap-1 overflow-hidden">
-          <p
-            className="truncate text-xs font-bold"
-            style={{
-              fontFamily: "var(--font-jetbrains)",
-              color: "var(--text)",
-            }}
+        {/* Right column: visualization + song info */}
+        <div className="flex flex-col" style={{ width: "120px", minWidth: "120px" }}>
+
+          {/* Top: Equalizer visualization */}
+          <div
+            className="flex items-end gap-[3px] px-3 pb-2 pt-3"
+            style={{ borderBottom: "3px solid var(--border)", height: "70px" }}
           >
-            {data.title}
-          </p>
-          <p
-            className="truncate text-[10px]"
-            style={{
-              fontFamily: "var(--font-jetbrains)",
-              color: "var(--muted)",
-            }}
-          >
-            {data.artist}
-          </p>
+            {[4, 8, 3, 6, 2, 7, 5].map((n, i) => (
+              <div
+                key={i}
+                className={`w-[6px] ${isPlaying ? `eq-bar-${n}` : ""}`}
+                style={{
+                  background: "var(--accent)",
+                  height: isPlaying ? undefined : `${n * 3}px`,
+                  opacity: isPlaying ? 1 : 0.35,
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Bottom: Song name (vertical) + album + artist */}
+          <div className="flex-1 flex flex-col overflow-hidden p-3 gap-2">
+            {/* Song name — rotated so it reads bottom-to-top */}
+            <div className="flex-1 overflow-hidden flex items-end">
+              <span
+                className="font-pixel text-[10px] font-black uppercase leading-none"
+                style={{
+                  color: "var(--accent)",
+                  writingMode: "vertical-rl",
+                  transform: "rotate(180deg)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  maxHeight: "100%",
+                  display: "block",
+                }}
+                title={data.title}
+              >
+                {data.title}
+              </span>
+            </div>
+
+            {/* Album */}
+            <p
+              className="font-pixel text-[7px] font-bold uppercase"
+              style={{ color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+              title={data.album}
+            >
+              {data.album}
+            </p>
+
+            {/* Artist */}
+            <p
+              className="font-pixel text-[7px] uppercase"
+              style={{ color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+              title={data.artist}
+            >
+              {data.artist}
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Animated equalizer */}
-      <div className="flex items-end gap-1.5 h-8">
-        {[1, 2, 3, 4, 5].map((n) => (
-          <div
-            key={n}
-            className={`w-2 eq-bar-${n}`}
-            style={{ background: "var(--accent)" }}
-          />
-        ))}
+      {/* ── Bottom strip: status + track summary ── */}
+      <div
+        className="flex items-center justify-between px-4 shrink-0"
+        style={{ height: "44px" }}
+      >
+        <div className="flex items-center gap-2">
+          <SpotifyIcon color="var(--accent)" />
+          <span
+            className="font-pixel text-[7px] tracking-widest"
+            style={{ color: isPlaying ? "var(--accent)" : "var(--muted)" }}
+          >
+            {isPlaying ? "NOW PLAYING" : "LAST PLAYED"}
+          </span>
+        </div>
+        {data.title && (
+          <span
+            className="font-pixel text-[7px] truncate max-w-[52%]"
+            style={{ color: "var(--muted)" }}
+          >
+            {data.title}
+            {data.artist ? ` — ${data.artist}` : ""}
+          </span>
+        )}
       </div>
-
-      {/* Spotify label */}
-      <div className="flex items-center gap-2">
-        <SpotifyIcon />
-        <span
-          className="text-[7px] tracking-widest"
-          style={{ fontFamily: "var(--font-press-start)", color: "var(--accent)" }}
-        >
-          LISTENING ON SPOTIFY
-        </span>
-      </div>
-    </div>
+    </BrutalistCard>
   )
 }
 
 function FallbackContent() {
   return (
-    <div className="flex flex-col gap-3">
-      {/* Equalizer bars */}
-      <div className="flex items-end gap-2 h-12">
-        {[1, 2, 3, 4, 5].map((n) => (
-          <div
-            key={n}
-            className={`w-3 eq-bar-${n}`}
-            style={{ background: "var(--accent)" }}
-          />
-        ))}
+    <BrutalistCard className="h-full flex flex-col justify-between" style={{ minHeight: "280px" }}>
+      <div className="flex items-center gap-3 mb-4">
+        <PixelNoteIcon color="var(--accent)" />
+        <h3 className="font-sans text-lg font-bold" style={{ color: "var(--text)" }}>
+          MUSIC
+        </h3>
       </div>
-      <p
-        className="italic"
-        style={{ fontFamily: "var(--font-playfair)", color: "var(--muted)" }}
-      >
-        {"\"Lo-fi, OSTs, and anything with a good beat.\""}
-      </p>
-    </div>
+      <div className="flex flex-col gap-3 mt-auto">
+        <div className="flex items-end gap-[3px] h-10">
+          {[4, 8, 3, 6, 2, 7, 5].map((n, i) => (
+            <div
+              key={i}
+              className={`w-[6px] eq-bar-${n}`}
+              style={{ background: "var(--accent)" }}
+            />
+          ))}
+        </div>
+        <p className="italic text-sm" style={{ fontFamily: "var(--font-playfair)", color: "var(--muted)" }}>
+          {"\"Lo-fi, OSTs, and anything with a good beat.\""}
+        </p>
+      </div>
+    </BrutalistCard>
   )
 }
 
-function SpotifyIcon() {
+function NotPlayingContent() {
   return (
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-      <circle cx="6" cy="6" r="6" fill="var(--accent)" />
+    <BrutalistCard className="h-full flex flex-col justify-between" style={{ minHeight: "280px" }}>
+      <div className="flex items-center gap-3 mb-4">
+        <PixelNoteIcon color="var(--muted)" />
+        <h3 className="font-sans text-lg font-bold" style={{ color: "var(--muted)" }}>
+          MUSIC
+        </h3>
+      </div>
+      <div className="flex flex-col gap-3 mt-auto">
+        <div className="flex items-end gap-[3px] h-8">
+          {[4, 8, 3, 6, 2, 7, 5].map((n, i) => (
+            <div
+              key={i}
+              className="w-[6px]"
+              style={{ height: `${n * 3}px`, background: "var(--muted)", opacity: 0.35 }}
+            />
+          ))}
+        </div>
+        <p className="font-pixel text-[8px] tracking-wider" style={{ color: "var(--muted)" }}>
+          NOT PLAYING
+        </p>
+        <p className="italic text-sm" style={{ fontFamily: "var(--font-playfair)", color: "var(--muted)" }}>
+          {"\"Lo-fi, OSTs, and anything with a good beat.\""}
+        </p>
+      </div>
+    </BrutalistCard>
+  )
+}
+
+function PixelNoteIcon({ color = "var(--text)" }: { color?: string }) {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style={{ imageRendering: "pixelated" }}>
       <path
-        d="M8.5 5.2c-1.5-.9-3.9-1-4.8-.5-.1.1-.2 0-.3-.1-.1-.1 0-.2.1-.3 1-.5 3.5-.4 5 .5.1.1.1.2.1.3-.1.1-.2.1-.1.1zM8.1 6.4c-1.3-.8-3.3-.9-4.2-.5-.1 0-.2 0-.2-.1-.1-.1 0-.2.1-.3.9-.4 3.1-.3 4.5.6.1.1.1.2.1.3-.1 0-.2.1-.3 0zM7.7 7.5c-1.1-.7-2.8-.7-3.6-.4-.1 0-.2 0-.2-.1s0-.2.1-.2c.9-.4 2.7-.3 3.9.4.1.1.1.2 0 .3h-.2z"
+        d="M10 4V20M10 4H20V8H14V20M10 20H6V16H10V20ZM14 20H18V16H14V20Z"
+        fill={color}
+      />
+    </svg>
+  )
+}
+
+function SpotifyIcon({ color = "var(--accent)" }: { color?: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="12" fill={color} />
+      <path
+        d="M17 10.4c-3-.9-7.9-1-9.6-.5-.2.1-.4 0-.5-.2-.1-.2 0-.4.2-.5 2-.6 7-.5 10 .5.2.1.3.3.2.5s-.2.3-.3.2zM16.3 12.8c-2.6-1.6-6.5-1.8-8.4-1-.2.1-.4 0-.5-.2-.1-.2 0-.4.2-.5 1.9-.8 6.2-.6 9 1.1.2.1.3.3.2.5-.1.2-.3.2-.5.1zM15.6 15.1c-2.1-1.3-5.5-1.4-7.2-.8-.2.1-.3 0-.4-.2s0-.3.2-.4c1.8-.7 5.4-.6 7.7.9.2.1.2.3.1.4-.1.2-.3.2-.4.1z"
         fill="var(--bg)"
       />
     </svg>
