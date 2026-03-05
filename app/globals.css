@@ -106,12 +106,18 @@ html {
 @keyframes eq3 { 0%, 100% { height: 12px; } 50% { height: 32px; } }
 @keyframes eq4 { 0%, 100% { height: 20px; } 50% { height: 24px; } }
 @keyframes eq5 { 0%, 100% { height: 6px; } 50% { height: 40px; } }
+@keyframes eq6 { 0%, 100% { height: 14px; } 50% { height: 34px; } }
+@keyframes eq7 { 0%, 100% { height: 10px; } 50% { height: 38px; } }
+@keyframes eq8 { 0%, 100% { height: 18px; } 50% { height: 30px; } }
 
 .eq-bar-1 { animation: eq1 0.8s ease-in-out infinite; }
 .eq-bar-2 { animation: eq2 1.1s ease-in-out infinite; }
 .eq-bar-3 { animation: eq3 0.9s ease-in-out infinite; }
 .eq-bar-4 { animation: eq4 1.3s ease-in-out infinite; }
 .eq-bar-5 { animation: eq5 0.7s ease-in-out infinite; }
+.eq-bar-6 { animation: eq6 1.0s ease-in-out infinite; }
+.eq-bar-7 { animation: eq7 0.85s ease-in-out infinite; }
+.eq-bar-8 { animation: eq8 1.2s ease-in-out infinite; }
 
 /* ═══════════════════════════════════════
    COIN SPIN
