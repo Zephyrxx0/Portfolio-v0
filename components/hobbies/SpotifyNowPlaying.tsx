@@ -201,7 +201,7 @@ function NowPlayingCard({ data }: { data: NowPlayingData }) {
         className="flex shrink-0 overflow-hidden"
         style={{
           borderTop: "0px",
-          padding: "6px",
+          padding: "6px 6px 6px 0",
         }}
       >
         {data.prev ? (
@@ -220,7 +220,7 @@ function NowPlayingCard({ data }: { data: NowPlayingData }) {
                 style={{
                   width: "80px",
                   height: "80px",
-                  margin: "6px",
+                  margin: "6px 6px 6px 0",
                   borderRadius: "10px",
                   flexShrink: 0,
                   alignSelf: "center",
@@ -275,7 +275,7 @@ function NowPlayingCard({ data }: { data: NowPlayingData }) {
                 style={{
                   width: "80px",
                   height: "80px",
-                  margin: "6px",
+                  margin: "6px 6px 6px 0",
                   borderRadius: "10px",
                   flexShrink: 0,
                   alignSelf: "center",
