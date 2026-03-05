@@ -201,29 +201,26 @@ function NowPlayingCard({ data }: { data: NowPlayingData }) {
         className="flex shrink-0 overflow-hidden"
         style={{
           borderTop: "0px",
-          padding: "6px",
+          padding: "0px",
         }}
       >
         {data.prev ? (
           // ── Has prev track data ──
           <div
-            className="flex w-full overflow-hidden"
-            style={{
-              borderRadius: "14px",
-            }}
+            className="flex w-full overflow-hidden items-stretch"
           >
             {data.prev.albumArt && (
               <img
                 src={data.prev.albumArt}
                 alt=""
-                className="shrink-0 object-cover"
+                className="object-cover"
                 style={{
-                  width: "80px",
-                  height: "80px",
-                  margin: "6px",
-                  borderRadius: "10px",
+                  alignSelf: "stretch",
+                  width: "auto",
+                  aspectRatio: "1 / 1",
+                  margin: "2px",
+                  borderRadius: "6px",
                   flexShrink: 0,
-                  alignSelf: "center",
                 }}
               />
             )}
@@ -261,24 +258,23 @@ function NowPlayingCard({ data }: { data: NowPlayingData }) {
             href={data.songUrl ?? "#"}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex w-full overflow-hidden transition-colors hover:bg-black/5"
+            className="flex w-full overflow-hidden items-stretch transition-colors hover:bg-black/5"
             style={{
               cursor: data.songUrl ? "pointer" : "default",
-              borderRadius: "14px",
             }}
           >
             {data.albumArt && (
               <img
                 src={data.albumArt}
                 alt=""
-                className="shrink-0 object-cover"
+                className="object-cover"
                 style={{
-                  width: "80px",
-                  height: "80px",
-                  margin: "6px",
-                  borderRadius: "10px",
+                  alignSelf: "stretch",
+                  width: "auto",
+                  aspectRatio: "1 / 1",
+                  margin: "2px",
+                  borderRadius: "6px",
                   flexShrink: 0,
-                  alignSelf: "center",
                 }}
               />
             )}
