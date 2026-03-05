@@ -176,17 +176,40 @@ function findPrevTrack(
   return extractPrevTrack(other?.track)
 }
 
+// Cache recently-played for 5 minutes to avoid rate limits.
+// On failure (429 etc.), back off for 60 seconds before retrying.
+let cachedRecentlyPlayed: Record<string, unknown> | null = null
+let rpCacheExpiresAt = 0
+
+async function getRecentlyPlayed(accessToken: string) {
+  if (Date.now() < rpCacheExpiresAt) {
+    return cachedRecentlyPlayed
+  }
+  const r = await fetch(RECENTLY_PLAYED_ENDPOINT, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    cache: "no-store",
+  })
+  if (!r.ok) {
+    // Back off: don't retry for 60s on error, 5 min on success
+    rpCacheExpiresAt = Date.now() + 60_000
+    cachedRecentlyPlayed = null
+    console.error(`[Spotify] recently-played ${r.status} — backing off 60s`)
+    return null
+  }
+  const data = await r.json()
+  cachedRecentlyPlayed = data
+  rpCacheExpiresAt = Date.now() + 5 * 60 * 1000
+  return data
+}
+
 export async function getNowPlaying(): Promise<NowPlayingData> {
   const accessToken = await getAccessToken()
   if (!accessToken) return { isPlaying: false }
 
   // Fetch recently-played in parallel with the current-playing check.
   // We always want this so we can populate the "prev" field in the bottom bar.
-  // limit=2 → items[0] is most recent, items[1] is the one before that.
-  const rpPromise = fetch(RECENTLY_PLAYED_ENDPOINT, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-    cache: "no-store",
-  }).then((r) => (r.ok ? r.json() : null)).catch(() => null)
+  // Cached for 5 min to avoid Spotify rate limits.
+  const rpPromise = getRecentlyPlayed(accessToken)
 
   // ── 1. GET /v1/me/player/currently-playing ──
   // Primary endpoint — lightweight, returns current track
