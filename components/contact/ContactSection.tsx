@@ -200,14 +200,14 @@ export default function ContactSection() {
               </p>
 
               <a
-                href="mailto:ayush@zephyrxx0.dev"
+                href="mailto:mahajan.ayush.official@gmail.com"
                 className="mb-6 inline-block text-[9px] underline"
                 style={{
                   fontFamily: "var(--font-press-start)",
                   color: theme === "dark" ? "#00ff9d" : "#c84b00",
                 }}
               >
-                {">"} ayush@zephyrxx0.dev
+                {">"} mahajan.ayush.official@gmail.com
               </a>
 
               <div className="mt-6">
@@ -273,8 +273,7 @@ export default function ContactSection() {
           <div className="flex flex-col gap-3">
             {[
               { label: "GITHUB", href: "https://github.com/Zephyrxx0" },
-              { label: "LINKEDIN", href: "https://linkedin.com/in/zephyrxx0" },
-              { label: "EMAIL", href: "mailto:ayush@zephyrxx0.dev" },
+              { label: "EMAIL", href: "mailto:mahajan.ayush.official@gmail.com" },
             ].map((link) => (
               <a
                 key={link.label}
