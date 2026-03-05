@@ -16,9 +16,9 @@ const CURRENTLY_PLAYING_ENDPOINT =
 const PLAYER_STATE_ENDPOINT = "https://api.spotify.com/v1/me/player"
 
 // GET /v1/me/player/recently-played — scope: user-read-recently-played
-// limit=2: index[0] = most recent, index[1] = the one before that
+// limit=5: gives enough history to find a track different from the current one
 const RECENTLY_PLAYED_ENDPOINT =
-  "https://api.spotify.com/v1/me/player/recently-played?limit=2"
+  "https://api.spotify.com/v1/me/player/recently-played?limit=5"
 
 // ── Token management ──
 // Cache the access token in memory (valid for ~1 hour per Spotify docs)
@@ -165,6 +165,17 @@ function extractPrevTrack(item: Record<string, unknown> | undefined) {
   }
 }
 
+// Find the first recently-played track that is different from the current song
+function findPrevTrack(
+  rpData: Record<string, unknown> | null,
+  currentTitle: string | undefined
+) {
+  const items = rpData?.items as Array<{ track: Record<string, unknown> }> | undefined
+  if (!items) return undefined
+  const other = items.find((i) => i.track?.name !== currentTitle)
+  return extractPrevTrack(other?.track)
+}
+
 export async function getNowPlaying(): Promise<NowPlayingData> {
   const accessToken = await getAccessToken()
   if (!accessToken) return { isPlaying: false }
@@ -189,13 +200,9 @@ export async function getNowPlaying(): Promise<NowPlayingData> {
     const cpData = await cpRes.json()
     const track = extractTrack(cpData)
     if (track) {
-      // Currently playing: prev = the track before this one in recently-played.
-      // items[0] is often the same as the current track, so skip it if titles match.
+      // Currently playing: prev = first recently-played track different from current
       const rpData = await rpPromise
-      const rp0 = rpData?.items?.[0]?.track
-      const rp1 = rpData?.items?.[1]?.track
-      const isSameSong = rp0?.name === track.title
-      track.prev = extractPrevTrack(isSameSong ? rp1 : rp0)
+      track.prev = findPrevTrack(rpData, track.title)
       return track
     }
   } else if (cpRes.status === 401) {
@@ -227,10 +234,7 @@ export async function getNowPlaying(): Promise<NowPlayingData> {
     const track = extractTrack(psData)
     if (track) {
       const rpData = await rpPromise
-      const rp0 = rpData?.items?.[0]?.track
-      const rp1 = rpData?.items?.[1]?.track
-      const isSameSong = rp0?.name === track.title
-      track.prev = extractPrevTrack(isSameSong ? rp1 : rp0)
+      track.prev = findPrevTrack(rpData, track.title)
       return track
     }
   }
