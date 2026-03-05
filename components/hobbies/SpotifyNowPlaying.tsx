@@ -199,95 +199,115 @@ function NowPlayingCard({ data }: { data: NowPlayingData }) {
       */}
       <div
         className="flex shrink-0 overflow-hidden"
-        style={{ borderTop: "0px" }} // border comes from the top-section's borderBottom
+        style={{
+          borderTop: "0px",
+          padding: "6px",
+        }}
       >
         {data.prev ? (
-          // ── Has prev track data: show it ──
-          <>
-            {/* Prev album art — fills the bar's full height, no rounding */}
+          // ── Has prev track data ──
+          <div
+            className="flex w-full overflow-hidden"
+            style={{
+              borderRadius: "14px",
+            }}
+          >
             {data.prev.albumArt && (
               <img
                 src={data.prev.albumArt}
                 alt=""
                 className="shrink-0 object-cover"
                 style={{
-                  width: "52px",
-                  height: "52px",
-                  borderRight: "3px solid var(--text)",
+                  width: "80px",
+                  height: "80px",
+                  margin: "6px",
+                  borderRadius: "10px",
+                  flexShrink: 0,
+                  alignSelf: "center",
                 }}
               />
             )}
-            {/* Prev track text info */}
             <div className="flex flex-col justify-center min-w-0 overflow-hidden px-3 py-2 gap-0.5">
-              {/* PREV TRACK label + Spotify icon */}
-              <div className="flex items-center gap-1.5">
-                <SpotifyIcon />
-                <span
-                  className="font-sans font-black uppercase shrink-0"
-                  style={{ fontSize: "7px", letterSpacing: "0.14em", color: "var(--muted)" }}
-                >
-                  PREV TRACK
-                </span>
-              </div>
-              {/* Prev song title — bold */}
               <span
-                className="font-sans truncate"
-                style={{ fontSize: "10px", fontWeight: 700, color: "var(--text)" }}
+                className="font-sans truncate uppercase leading-none"
+                style={{ fontSize: "20px", fontWeight: 900, color: "var(--text)", letterSpacing: "0.02em" }}
                 title={data.prev.title}
               >
                 {data.prev.title}
               </span>
-              {/* Prev album name — italic, muted */}
               {data.prev.album && (
                 <span
-                  className="font-sans truncate"
-                  style={{ fontSize: "8px", fontStyle: "italic", color: "var(--muted)" }}
+                  className="font-sans truncate leading-snug"
+                  style={{ fontSize: "13px", fontWeight: 600, fontStyle: "italic", color: "var(--text)", opacity: 0.75 }}
                   title={data.prev.album}
                 >
                   {data.prev.album}
                 </span>
               )}
+              {data.prev.artist && (
+                <span
+                  className="font-sans truncate leading-snug"
+                  style={{ fontSize: "10px", fontWeight: 400, color: "var(--muted)" }}
+                  title={data.prev.artist}
+                >
+                  {data.prev.artist}
+                </span>
+              )}
             </div>
-          </>
+          </div>
         ) : (
-          // ── No prev track yet: fall back to the NOW PLAYING / LAST PLAYED strip ──
+          // ── No prev track: show current track ──
           <a
             href={data.songUrl ?? "#"}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-3 px-4 py-2.5 w-full transition-colors hover:bg-white/5"
-            style={{ cursor: data.songUrl ? "pointer" : "default" }}
+            className="flex w-full overflow-hidden transition-colors hover:bg-white/5"
+            style={{
+              cursor: data.songUrl ? "pointer" : "default",
+              borderRadius: "14px",
+            }}
           >
             {data.albumArt && (
               <img
                 src={data.albumArt}
                 alt=""
-                className="w-7 h-7 shrink-0 object-cover"
-                style={{ border: "1.5px solid var(--text)", borderRadius: "4px" }}
+                className="shrink-0 object-cover"
+                style={{
+                  width: "80px",
+                  height: "80px",
+                  margin: "6px",
+                  borderRadius: "10px",
+                  flexShrink: 0,
+                  alignSelf: "center",
+                }}
               />
             )}
-            <div className="flex flex-col min-w-0 overflow-hidden gap-0.5">
-              <div className="flex items-center gap-1.5">
-                <SpotifyIcon />
-                <span
-                  className="font-sans font-black uppercase shrink-0"
-                  style={{
-                    fontSize: "8px",
-                    letterSpacing: "0.12em",
-                    color: isPlaying ? "var(--accent)" : "var(--muted)",
-                  }}
-                >
-                  {isPlaying ? "NOW PLAYING" : "LAST PLAYED"}
-                </span>
-              </div>
+            <div className="flex flex-col justify-center min-w-0 overflow-hidden px-3 py-2 gap-0.5">
               <span
-                className="font-sans truncate"
-                style={{ fontSize: "9px", color: "var(--muted)" }}
+                className="font-sans truncate uppercase leading-none"
+                style={{ fontSize: "20px", fontWeight: 900, color: "var(--text)", letterSpacing: "0.02em" }}
+                title={data.title}
               >
-                <span style={{ fontWeight: 700, color: "var(--text)" }}>{data.title}</span>
-                {data.artist && <> · {data.artist}</>}
-                {data.album && <> · <span style={{ fontStyle: "italic" }}>{data.album}</span></>}
+                {data.title}
               </span>
+              {data.album && (
+                <span
+                  className="font-sans truncate leading-snug"
+                  style={{ fontSize: "13px", fontWeight: 600, fontStyle: "italic", color: "var(--text)", opacity: 0.75 }}
+                  title={data.album}
+                >
+                  {data.album}
+                </span>
+              )}
+              {data.artist && (
+                <span
+                  className="font-sans truncate leading-snug"
+                  style={{ fontSize: "10px", fontWeight: 400, color: "var(--muted)" }}
+                  title={data.artist}
+                >
+                  {data.artist}
+                </span>
+              )}
             </div>
           </a>
         )}
