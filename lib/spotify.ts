@@ -16,9 +16,9 @@ const CURRENTLY_PLAYING_ENDPOINT =
 const PLAYER_STATE_ENDPOINT = "https://api.spotify.com/v1/me/player"
 
 // GET /v1/me/player/recently-played — scope: user-read-recently-played
-// limit=2: index[0] = most recent, index[1] = the one before that
+// limit=5: gives enough history to find a track different from the current one
 const RECENTLY_PLAYED_ENDPOINT =
-  "https://api.spotify.com/v1/me/player/recently-played?limit=2"
+  "https://api.spotify.com/v1/me/player/recently-played?limit=5"
 
 // ── Token management ──
 // Cache the access token in memory (valid for ~1 hour per Spotify docs)
@@ -125,6 +125,7 @@ export interface NowPlayingData {
     title?: string
     album?: string
     albumArt?: string
+    artist?: string
   }
 }
 
@@ -158,11 +159,50 @@ function extractPrevTrack(item: Record<string, unknown> | undefined) {
   if (!item) return undefined
   const album = item.album as Record<string, unknown> | undefined
   const images = album?.images as Array<{ url: string }> | undefined
+  const artists = item.artists as Array<{ name: string }> | undefined
   return {
     title: item.name as string | undefined,
     album: album?.name as string | undefined,
     albumArt: images?.[0]?.url,
+    artist: artists?.map((a) => a.name).join(", "),
   }
+}
+
+// Find the first recently-played track that is different from the current song
+function findPrevTrack(
+  rpData: Record<string, unknown> | null,
+  currentTitle: string | undefined
+) {
+  const items = rpData?.items as Array<{ track: Record<string, unknown> }> | undefined
+  if (!items) return undefined
+  const other = items.find((i) => i.track?.name !== currentTitle)
+  return extractPrevTrack(other?.track)
+}
+
+// Cache recently-played for 5 minutes to avoid rate limits.
+// On failure (429 etc.), back off for 60 seconds before retrying.
+let cachedRecentlyPlayed: Record<string, unknown> | null = null
+let rpCacheExpiresAt = 0
+
+async function getRecentlyPlayed(accessToken: string) {
+  if (Date.now() < rpCacheExpiresAt) {
+    return cachedRecentlyPlayed
+  }
+  const r = await fetch(RECENTLY_PLAYED_ENDPOINT, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    cache: "no-store",
+  })
+  if (!r.ok) {
+    // Back off: don't retry for 60s on error, 5 min on success
+    rpCacheExpiresAt = Date.now() + 60_000
+    cachedRecentlyPlayed = null
+    console.error(`[Spotify] recently-played ${r.status} — backing off 60s`)
+    return null
+  }
+  const data = await r.json()
+  cachedRecentlyPlayed = data
+  rpCacheExpiresAt = Date.now() + 5 * 60 * 1000
+  return data
 }
 
 export async function getNowPlaying(): Promise<NowPlayingData> {
@@ -171,11 +211,8 @@ export async function getNowPlaying(): Promise<NowPlayingData> {
 
   // Fetch recently-played in parallel with the current-playing check.
   // We always want this so we can populate the "prev" field in the bottom bar.
-  // limit=2 → items[0] is most recent, items[1] is the one before that.
-  const rpPromise = fetch(RECENTLY_PLAYED_ENDPOINT, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-    cache: "no-store",
-  }).then((r) => (r.ok ? r.json() : null)).catch(() => null)
+  // Cached for 5 min to avoid Spotify rate limits.
+  const rpPromise = getRecentlyPlayed(accessToken)
 
   // ── 1. GET /v1/me/player/currently-playing ──
   // Primary endpoint — lightweight, returns current track
@@ -189,9 +226,9 @@ export async function getNowPlaying(): Promise<NowPlayingData> {
     const cpData = await cpRes.json()
     const track = extractTrack(cpData)
     if (track) {
-      // Currently playing: prev = most recent in recently-played (items[0])
+      // Currently playing: prev = first recently-played track different from current
       const rpData = await rpPromise
-      track.prev = extractPrevTrack(rpData?.items?.[0]?.track)
+      track.prev = findPrevTrack(rpData, track.title)
       return track
     }
   } else if (cpRes.status === 401) {
@@ -223,7 +260,7 @@ export async function getNowPlaying(): Promise<NowPlayingData> {
     const track = extractTrack(psData)
     if (track) {
       const rpData = await rpPromise
-      track.prev = extractPrevTrack(rpData?.items?.[0]?.track)
+      track.prev = findPrevTrack(rpData, track.title)
       return track
     }
   }

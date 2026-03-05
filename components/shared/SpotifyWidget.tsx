@@ -11,7 +11,7 @@ export default function SpotifyWidget() {
     useEffect(() => {
         const fetchNowPlaying = async () => {
             try {
-                const res = await fetch("/api/spotify/now-playing", { cache: "no-store" })
+                const res = await fetch("/api/now-playing", { cache: "no-store" })
                 const json = await res.json()
                 setData(json)
             } catch (error) {
