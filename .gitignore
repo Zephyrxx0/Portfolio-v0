@@ -20,3 +20,7 @@ public/prompts/overworld-revamp.md
 .env
 .env
 temp.md
+public/examples/nether_current.png
+public/examples/nether_desired.png
+public/examples/overworld_current.png
+public/examples/overworld_desired.png
