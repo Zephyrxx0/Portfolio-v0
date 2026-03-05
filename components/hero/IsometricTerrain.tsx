@@ -216,9 +216,9 @@ export default function IsometricTerrain() {
       camera.position.set(24, 24, 24)
       camera.lookAt(0, 0, 0)
 
-      const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true })
+      const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: "high-performance" })
       renderer.setSize(window.innerWidth, window.innerHeight)
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
       renderer.shadowMap.enabled = true
       renderer.shadowMap.type = THREE.PCFSoftShadowMap
       mountRef.current.appendChild(renderer.domElement)
@@ -284,114 +284,118 @@ export default function IsometricTerrain() {
         const tex = loader.load(path)
         tex.magFilter = THREE.NearestFilter
         tex.minFilter = THREE.NearestFilter
-        // Wrap for larger repeating surfaces
         tex.wrapS = THREE.RepeatWrapping
         tex.wrapT = THREE.RepeatWrapping
         return tex
       }
+      // 1×1 placeholder used for the inactive theme — never rendered, no network request
+      const makeDummyTex = () => {
+        const c = document.createElement("canvas"); c.width = c.height = 1
+        const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; return t
+      }
+      const nt = makeDummyTex() // noTex shorthand
+      const ow = (p: string) => isDark ? nt : loadTex(p)  // overworld-only
+      const ne = (p: string) => isDark ? loadTex(p) : nt  // nether-only
 
       const tex = {
         // Overworld base
-        dirt: loadTex('/assets/overworld/dirt.png'),
-        coarseDirt: loadTex('/assets/overworld/coarse_dirt.png'),
-        grassTop: loadTex('/assets/overworld/grass_block_top.png'),
-        grassSide: loadTex('/assets/overworld/grass_block_side.png'),
-        water: loadTex('/assets/overworld/water_still.png'),
-        logTop: loadTex('/assets/overworld/oak_log_top.png'),
-        logSide: loadTex('/assets/overworld/oak_log.png'),
-        leaves: loadTex('/assets/overworld/oak_leaves.png'),
-        sun: loadTex('/assets/overworld/sun.png'),
-        path: loadTex('/assets/overworld/dirt_path_top.png'),
-        chest: loadTex('/assets/overworld/chest_normal.png'),
-        craftingFront: loadTex('/assets/overworld/crafting_table_front.png'),
-        craftingSide: loadTex('/assets/overworld/crafting_table_side.png'),
-        craftingTop: loadTex('/assets/overworld/crafting_table_top.png'),
-        orchid: loadTex('/assets/overworld/blue_orchid.png'),
-        poppy: loadTex('/assets/overworld/poppy.png'),
-        rose: loadTex('/assets/overworld/rose_bush_top.png'),
-        gravel: loadTex('/assets/overworld/gravel.png'),
-        sand: loadTex('/assets/overworld/sand.png'),
-        goldOre: loadTex('/assets/overworld/gold_ore.png'),
-        ironOre: loadTex('/assets/overworld/iron_ore.png'),
+        dirt: ow('/assets/overworld/dirt.png'),
+        coarseDirt: ow('/assets/overworld/coarse_dirt.png'),
+        grassTop: ow('/assets/overworld/grass_block_top.png'),
+        grassSide: ow('/assets/overworld/grass_block_side.png'),
+        water: ow('/assets/overworld/water_still.png'),
+        logTop: ow('/assets/overworld/oak_log_top.png'),
+        logSide: ow('/assets/overworld/oak_log.png'),
+        leaves: ow('/assets/overworld/oak_leaves.png'),
+        sun: ow('/assets/overworld/sun.png'),
+        path: ow('/assets/overworld/dirt_path_top.png'),
+        chest: ow('/assets/overworld/chest_normal.png'),
+        craftingFront: ow('/assets/overworld/crafting_table_front.png'),
+        craftingSide: ow('/assets/overworld/crafting_table_side.png'),
+        craftingTop: ow('/assets/overworld/crafting_table_top.png'),
+        orchid: ow('/assets/overworld/blue_orchid.png'),
+        poppy: ow('/assets/overworld/poppy.png'),
+        rose: ow('/assets/overworld/rose_bush_top.png'),
+        gravel: ow('/assets/overworld/gravel.png'),
+        sand: ow('/assets/overworld/sand.png'),
+        goldOre: ow('/assets/overworld/gold_ore.png'),
+        ironOre: ow('/assets/overworld/iron_ore.png'),
         // Stone & ores
-        stone: loadTex('/assets/overworld/stone.png'),
-        cobblestone: loadTex('/assets/overworld/cobblestone.png'),
-        mossyCobblestone: loadTex('/assets/overworld/mossy_cobblestone.png'),
-        stoneBricks: loadTex('/assets/overworld/stone_bricks.png'),
-        mossyStoneBricks: loadTex('/assets/overworld/mossy_stone_bricks.png'),
-        diamondOre: loadTex('/assets/overworld/diamond_ore.png'),
-        coalOre: loadTex('/assets/overworld/coal_ore.png'),
-        redstoneOre: loadTex('/assets/overworld/redstone_ore.png'),
+        stone: ow('/assets/overworld/stone.png'),
+        cobblestone: ow('/assets/overworld/cobblestone.png'),
+        mossyCobblestone: ow('/assets/overworld/mossy_cobblestone.png'),
+        stoneBricks: ow('/assets/overworld/stone_bricks.png'),
+        mossyStoneBricks: ow('/assets/overworld/mossy_stone_bricks.png'),
+        diamondOre: ow('/assets/overworld/diamond_ore.png'),
+        coalOre: ow('/assets/overworld/coal_ore.png'),
+        redstoneOre: ow('/assets/overworld/redstone_ore.png'),
         // Wood variants
-        oakPlanks: loadTex('/assets/overworld/oak_planks.png'),
-        birchLogSide: loadTex('/assets/overworld/birch_log.png'),
-        birchLogTop: loadTex('/assets/overworld/birch_log_top.png'),
-        birchLeaves: loadTex('/assets/overworld/birch_leaves.png'),
-        spruceLog: loadTex('/assets/overworld/spruce_log.png'),
-        spruceLogTop: loadTex('/assets/overworld/spruce_log_top.png'),
-        spruceLeaves: loadTex('/assets/overworld/spruce_leaves.png'),
-        darkOakLog: loadTex('/assets/overworld/dark_oak_log.png'),
-        darkOakLogTop: loadTex('/assets/overworld/dark_oak_log_top.png'),
-        darkOakLeaves: loadTex('/assets/overworld/dark_oak_leaves.png'),
+        oakPlanks: ow('/assets/overworld/oak_planks.png'),
+        birchLogSide: ow('/assets/overworld/birch_log.png'),
+        birchLogTop: ow('/assets/overworld/birch_log_top.png'),
+        birchLeaves: ow('/assets/overworld/birch_leaves.png'),
+        spruceLog: ow('/assets/overworld/spruce_log.png'),
+        spruceLogTop: ow('/assets/overworld/spruce_log_top.png'),
+        spruceLeaves: ow('/assets/overworld/spruce_leaves.png'),
+        darkOakLog: ow('/assets/overworld/dark_oak_log.png'),
+        darkOakLogTop: ow('/assets/overworld/dark_oak_log_top.png'),
+        darkOakLeaves: ow('/assets/overworld/dark_oak_leaves.png'),
         // Flora
-        redMushroom: loadTex('/assets/overworld/red_mushroom.png'),
-        brownMushroom: loadTex('/assets/overworld/brown_mushroom.png'),
-        lilyPad: loadTex('/assets/overworld/lily_pad.png'),
-        shortGrass: loadTex('/assets/overworld/short_grass.png'),
-        fern: loadTex('/assets/overworld/fern.png'),
-        redTulip: loadTex('/assets/overworld/red_tulip.png'),
-        cornflower: loadTex('/assets/overworld/cornflower.png'),
-        oxeyeDaisy: loadTex('/assets/overworld/oxeye_daisy.png'),
-        vine: loadTex('/assets/overworld/vine.png'),
-        floweringAzalea: loadTex('/assets/overworld/flowering_azalea_leaves.png'),
-        sugarCane: loadTex('/assets/overworld/sugar_cane.png'),
+        redMushroom: ow('/assets/overworld/red_mushroom.png'),
+        brownMushroom: ow('/assets/overworld/brown_mushroom.png'),
+        lilyPad: ow('/assets/overworld/lily_pad.png'),
+        shortGrass: ow('/assets/overworld/short_grass.png'),
+        fern: ow('/assets/overworld/fern.png'),
+        redTulip: ow('/assets/overworld/red_tulip.png'),
+        cornflower: ow('/assets/overworld/cornflower.png'),
+        oxeyeDaisy: ow('/assets/overworld/oxeye_daisy.png'),
+        floweringAzalea: ow('/assets/overworld/flowering_azalea_leaves.png'),
+        sugarCane: ow('/assets/overworld/sugar_cane.png'),
         // Decorative blocks
-        tntSide: loadTex('/assets/overworld/tnt_side.png'),
-        tntTop: loadTex('/assets/overworld/tnt_top.png'),
-        tntBottom: loadTex('/assets/overworld/tnt_bottom.png'),
-        pumpkinSide: loadTex('/assets/overworld/pumpkin_side.png'),
-        pumpkinTop: loadTex('/assets/overworld/pumpkin_top.png'),
-        jackOLantern: loadTex('/assets/overworld/jack_o_lantern.png'),
-        melonSide: loadTex('/assets/overworld/melon_side.png'),
-        melonTop: loadTex('/assets/overworld/melon_top.png'),
-        mossBlock: loadTex('/assets/overworld/moss_block.png'),
-        beeNest: loadTex('/assets/overworld/bee_nest_front_honey.png'),
-        bookshelf: loadTex('/assets/overworld/bookshelf.png'),
-        glass: loadTex('/assets/overworld/glass.png'),
-        rail: loadTex('/assets/overworld/rail.png'),
-        clay: loadTex('/assets/overworld/clay.png'),
+        tntSide: ow('/assets/overworld/tnt_side.png'),
+        tntTop: ow('/assets/overworld/tnt_top.png'),
+        tntBottom: ow('/assets/overworld/tnt_bottom.png'),
+        pumpkinSide: ow('/assets/overworld/pumpkin_side.png'),
+        pumpkinTop: ow('/assets/overworld/pumpkin_top.png'),
+        jackOLantern: ow('/assets/overworld/jack_o_lantern.png'),
+        melonSide: ow('/assets/overworld/melon_side.png'),
+        melonTop: ow('/assets/overworld/melon_top.png'),
+        mossBlock: ow('/assets/overworld/moss_block.png'),
+        beeNest: ow('/assets/overworld/bee_nest_front_honey.png'),
+        bookshelf: ow('/assets/overworld/bookshelf.png'),
+        clay: ow('/assets/overworld/clay.png'),
         // Nether
-        netherrack: loadTex('/assets/nether/netherrack.png'),
-        lava: loadTex('/assets/nether/lava_flow.png'),
-        obsidian: loadTex('/assets/nether/obsidian.png'),
-        fire: loadTex('/assets/nether/fire_0.png'),
-        magma: loadTex('/assets/nether/magma.png'),
-        netherBricks: loadTex('/assets/nether/nether_bricks.png'),
-        soulSand: loadTex('/assets/nether/soul_sand.png'),
-        soulSoil: loadTex('/assets/nether/soul_soil.png'),
-        blackstone: loadTex('/assets/nether/blackstone.png'),
-        blackstoneTop: loadTex('/assets/nether/blackstone_top.png'),
-        cryingObsidian: loadTex('/assets/nether/crying_obsidian.png'),
-        glowstoneTex: loadTex('/assets/nether/glowstone.png'),
-        shroomlight: loadTex('/assets/nether/shroomlight.png'),
-        crimsonStem: loadTex('/assets/nether/crimson_stem.png'),
-        crimsonStemTop: loadTex('/assets/nether/crimson_stem_top.png'),
-        warpedStem: loadTex('/assets/nether/warped_stem.png'),
-        warpedStemTop: loadTex('/assets/nether/warped_stem_top.png'),
-        crimsonNylium: loadTex('/assets/nether/crimson_nylium.png'),
-        crimsonNyliumSide: loadTex('/assets/nether/crimson_nylium_side.png'),
-        warpedNylium: loadTex('/assets/nether/warped_nylium.png'),
-        warpedNyliumSide: loadTex('/assets/nether/warped_nylium_side.png'),
-        crimsonPlanks: loadTex('/assets/nether/crimson_planks.png'),
-        warpedPlanks: loadTex('/assets/nether/warped_planks.png'),
-        netherWartBlock: loadTex('/assets/nether/nether_wart_block.png'),
-        warpedWartBlock: loadTex('/assets/nether/warped_wart_block.png'),
-        ancientDebrisSide: loadTex('/assets/nether/ancient_debris_side.png'),
-        ancientDebrisTop: loadTex('/assets/nether/ancient_debris_top.png'),
-        netherGoldOre: loadTex('/assets/nether/nether_gold_ore.png'),
-        basaltSide: loadTex('/assets/nether/basalt_side.png'),
-        basaltTop: loadTex('/assets/nether/basalt_top.png'),
-        soulFire: loadTex('/assets/nether/soul_fire_0.png'),
+        netherrack: ne('/assets/nether/netherrack.png'),
+        lava: ne('/assets/nether/lava_flow.png'),
+        obsidian: ne('/assets/nether/obsidian.png'),
+        fire: ne('/assets/nether/fire_0.png'),
+        magma: ne('/assets/nether/magma.png'),
+        netherBricks: ne('/assets/nether/nether_bricks.png'),
+        soulSand: ne('/assets/nether/soul_sand.png'),
+        soulSoil: ne('/assets/nether/soul_soil.png'),
+        blackstone: ne('/assets/nether/blackstone.png'),
+        blackstoneTop: ne('/assets/nether/blackstone_top.png'),
+        cryingObsidian: ne('/assets/nether/crying_obsidian.png'),
+        glowstoneTex: ne('/assets/nether/glowstone.png'),
+        shroomlight: ne('/assets/nether/shroomlight.png'),
+        crimsonStem: ne('/assets/nether/crimson_stem.png'),
+        crimsonStemTop: ne('/assets/nether/crimson_stem_top.png'),
+        warpedStem: ne('/assets/nether/warped_stem.png'),
+        warpedStemTop: ne('/assets/nether/warped_stem_top.png'),
+        crimsonNylium: ne('/assets/nether/crimson_nylium.png'),
+        crimsonNyliumSide: ne('/assets/nether/crimson_nylium_side.png'),
+        warpedNylium: ne('/assets/nether/warped_nylium.png'),
+        warpedNyliumSide: ne('/assets/nether/warped_nylium_side.png'),
+        crimsonPlanks: ne('/assets/nether/crimson_planks.png'),
+        warpedPlanks: ne('/assets/nether/warped_planks.png'),
+        netherWartBlock: ne('/assets/nether/nether_wart_block.png'),
+        warpedWartBlock: ne('/assets/nether/warped_wart_block.png'),
+        ancientDebrisSide: ne('/assets/nether/ancient_debris_side.png'),
+        ancientDebrisTop: ne('/assets/nether/ancient_debris_top.png'),
+        netherGoldOre: ne('/assets/nether/nether_gold_ore.png'),
+        basaltSide: ne('/assets/nether/basalt_side.png'),
+        basaltTop: ne('/assets/nether/basalt_top.png'),
+        soulFire: ne('/assets/nether/soul_fire_0.png'),
       }
 
       // ── Sun sprite (Overworld only) ──
@@ -532,9 +536,7 @@ export default function IsometricTerrain() {
           new THREE.MeshLambertMaterial({ map: tex.bookshelf }),
           new THREE.MeshLambertMaterial({ map: tex.bookshelf }),
         ],
-        glass: new THREE.MeshLambertMaterial({ map: tex.glass, transparent: true, opacity: 0.6 }),
-        bee_nest: new THREE.MeshLambertMaterial({ map: tex.beeNest }),
-        rail: new THREE.MeshLambertMaterial({ map: tex.rail, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide }),
+        bee_nest:new THREE.MeshLambertMaterial({ map: tex.beeNest }),
         // Flora
         orchid: new THREE.MeshLambertMaterial({ map: tex.orchid, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide }),
         poppy: new THREE.MeshLambertMaterial({ map: tex.poppy, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide }),
@@ -549,7 +551,6 @@ export default function IsometricTerrain() {
         fern: new THREE.MeshLambertMaterial({ map: tex.fern, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide, color: 0x6a9a4a }),
         lily_pad: new THREE.MeshLambertMaterial({ map: tex.lilyPad, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide, color: 0x4a8a3a }),
         sugar_cane: new THREE.MeshLambertMaterial({ map: tex.sugarCane, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide, color: 0x6aaa4a }),
-        vine: new THREE.MeshLambertMaterial({ map: tex.vine, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide, color: 0x5a8a3a }),
 
         // Nether
         netherrack: new THREE.MeshLambertMaterial({ map: tex.netherrack }),
@@ -760,42 +761,40 @@ export default function IsometricTerrain() {
         }
       }
 
-      const allMeshes: THREE.Mesh[] = []
+      const allMeshes: THREE.Object3D[] = []
 
-      // Sub-surface material selection based on depth
-      const getSubSurfaceMat = (y: number, stackHeight: number, type: string, isDark: boolean): THREE.Material | THREE.Material[] => {
+      // Return material key string for sub-surface blocks
+      const getSubSurfaceKey = (y: number, stackHeight: number, type: string, isDark: boolean): string => {
         if (isDark) {
-          // Nether sub-surface layers
-          if (y <= 1) return materials.blackstone
-          if (type === "basalt") return materials.basalt
-          return materials.netherrack
+          if (y <= 1) return "blackstone"
+          if (type === "basalt") return "basalt"
+          return "netherrack"
         } else {
-          // Overworld: stone at bottom, dirt in middle, surface on top
           const depthFromTop = stackHeight - y
           if (depthFromTop >= 3) {
-            // Deep stone with occasional ore
             const r = hash(y * 37 + stackHeight, y * 13)
-            if (r > 0.95) return materials.diamond_ore
-            if (r > 0.88) return materials.coal_ore
-            if (r > 0.82) return materials.iron_ore
-            if (r > 0.78) return materials.redstone_ore
-            return materials.stone
+            if (r > 0.95) return "diamond_ore"
+            if (r > 0.88) return "coal_ore"
+            if (r > 0.82) return "iron_ore"
+            if (r > 0.78) return "redstone_ore"
+            return "stone"
           }
-          if (depthFromTop >= 1) return materials.dirt
-          return materials.dirt
+          return "dirt"
         }
       }
+
+      // ── Collect block data then batch into InstancedMesh (single-mat) or Mesh (array-mat) ──
+      const singleBatches = new Map<string, THREE.Vector3[]>()
+      const arrayMatBlocks: { matKey: string; pos: THREE.Vector3 }[] = []
 
       for (let z = 0; z < gridSize; z++) {
         for (let x = 0; x < gridSize; x++) {
           const h = heights[z][x]
           const type = blockTypes[z][x]
-
           if (type === "skip") continue
 
           const stackHeight = h
 
-          // Edge erosion: skip bottom blocks for crumbling underside
           const ef = edgeFactors[z]?.[x] || 0
           let startY = 0
           if (ef > 0.15 && stackHeight > 1) {
@@ -807,13 +806,7 @@ export default function IsometricTerrain() {
           }
 
           for (let y = startY; y <= stackHeight; y++) {
-            let mat: THREE.Material | THREE.Material[]
-
-            if (y === stackHeight) {
-              mat = materials[type] || materials.dirt
-            } else {
-              mat = getSubSurfaceMat(y, stackHeight, type, isDark)
-            }
+            const matKey = y === stackHeight ? type : getSubSurfaceKey(y, stackHeight, type, isDark)
 
             let isVisible = y === stackHeight || x === 0 || x === gridSize - 1 || z === 0 || z === gridSize - 1
             if (!isVisible) {
@@ -821,23 +814,52 @@ export default function IsometricTerrain() {
               const xPlus = heights[z][x + 1] || -99
               const zMinus = heights[z - 1]?.[x] || -99
               const zPlus = heights[z + 1]?.[x] || -99
-              if (y > xMinus || y > xPlus || y > zMinus || y > zPlus) {
-                isVisible = true
-              }
+              if (y > xMinus || y > xPlus || y > zMinus || y > zPlus) isVisible = true
             }
+            if (!isVisible) continue
 
-            if (isVisible) {
-              const block = new THREE.Mesh(blockGeo, mat)
-              block.position.set(x - offset + 0.5, y - 3, z - offset + 0.5)
-              block.castShadow = true
-              block.receiveShadow = true
-              world.add(block)
-              allMeshes.push(block)
-              terrainMeshes.push(block)
+            const mat = materials[matKey]
+            if (!mat) continue
+
+            const pos = new THREE.Vector3(x - offset + 0.5, y - 3, z - offset + 0.5)
+            if (Array.isArray(mat)) {
+              arrayMatBlocks.push({ matKey, pos })
+            } else {
+              if (!singleBatches.has(matKey)) singleBatches.set(matKey, [])
+              singleBatches.get(matKey)!.push(pos)
             }
           }
         }
       }
+
+      // Build InstancedMesh for single-material block types
+      const dummy = new THREE.Object3D()
+      singleBatches.forEach((positions, key) => {
+        const mat = materials[key] as THREE.Material
+        const im = new THREE.InstancedMesh(blockGeo, mat, positions.length)
+        positions.forEach((pos, i) => {
+          dummy.position.copy(pos)
+          dummy.updateMatrix()
+          im.setMatrixAt(i, dummy.matrix)
+        })
+        im.instanceMatrix.needsUpdate = true
+        im.castShadow = true
+        im.receiveShadow = true
+        world.add(im)
+        allMeshes.push(im)
+        terrainMeshes.push(im)
+      })
+
+      // Regular Mesh for multi-face blocks (grass, logs, etc.)
+      arrayMatBlocks.forEach(({ matKey, pos }) => {
+        const block = new THREE.Mesh(blockGeo, materials[matKey] as THREE.Material[])
+        block.position.copy(pos)
+        block.castShadow = true
+        block.receiveShadow = true
+        world.add(block)
+        allMeshes.push(block)
+        terrainMeshes.push(block)
+      })
 
       // Add special Objects to terrain array
       const addDeco = (geo: THREE.BufferGeometry, mat: THREE.Material | THREE.Material[], px: number, py: number, pz: number, isTerrain = false) => {
@@ -869,7 +891,6 @@ export default function IsometricTerrain() {
       const flowerGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5)
       const tallGrassGeo = new THREE.PlaneGeometry(0.8, 0.8)
       const lilyPadGeo = new THREE.PlaneGeometry(0.7, 0.7)
-      const railGeo = new THREE.PlaneGeometry(1, 1)
 
       // Build a small floating island cluster
       const buildFloatingIsland = (
@@ -1367,7 +1388,7 @@ export default function IsometricTerrain() {
       }
 
       // ── Particles ──
-      const particleCount = 200
+      const particleCount = 80
       const particleGeo = new THREE.BufferGeometry()
       const positionsArr = new Float32Array(particleCount * 3)
       for (let i = 0; i < particleCount; i++) {
@@ -1560,12 +1581,12 @@ export default function IsometricTerrain() {
         flowerGeo.dispose()
         tallGrassGeo.dispose()
         lilyPadGeo.dispose()
-        railGeo.dispose()
         Object.values(materials).forEach(m => {
           if (Array.isArray(m)) m.forEach(mat => mat.dispose())
           else m.dispose()
         })
         Object.values(tex).forEach(t => t.dispose())
+        nt.dispose()
         particleGeo.dispose()
         particleMat.dispose()
 
