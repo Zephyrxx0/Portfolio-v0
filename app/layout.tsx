@@ -30,6 +30,9 @@ export const metadata: Metadata = {
   title: "Ayush Mahajan | @Zephyrxx0 — Portfolio",
   description:
     "Software Engineer. Builder. Pixel Enthusiast. Portfolio of Ayush Mahajan featuring projects, skills, and creative endeavors.",
+  icons: {
+    icon: "/icon.svg",
+  },
 }
 
 export const viewport: Viewport = {
