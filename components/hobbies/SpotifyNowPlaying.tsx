@@ -74,6 +74,23 @@ export default function SpotifyNowPlaying() {
           setClientLastPlayed(lastPlayed)
           writeLocalLastPlayed(lastPlayed)
         }
+
+        // Always persist whatever track the API knows about (current or last-played)
+        // so that on future visits, if the API is down, the card still shows something.
+        if (json.title) {
+          const trackToSave = {
+            title: json.title,
+            artist: json.artist,
+            albumArt: json.albumArt,
+            album: json.album,
+          }
+          writeLocalLastPlayed(trackToSave)
+          if (!prev?.title) {
+            // First load — seed clientLastPlayed so it's immediately available
+            setClientLastPlayed(trackToSave)
+          }
+        }
+
         prevDataRef.current = json
         setData(json)
       } catch {
@@ -88,7 +105,14 @@ export default function SpotifyNowPlaying() {
   }, [])
 
   if (!hasCredentials || !data) return <FallbackContent />
-  if (!data.isPlaying && !data.title) return <NotPlayingContent />
+
+  // When nothing is playing and the API has no track, use localStorage last-played to fill the card
+  if (!data.isPlaying && !data.title) {
+    if (clientLastPlayed) {
+      return <NowPlayingCard data={{ isPlaying: false, ...clientLastPlayed }} />
+    }
+    return <NotPlayingContent />
+  }
 
   // Prefer the API-provided prev; fall back to persisted client-side prev
   const effectivePrev = data.prev ?? clientLastPlayed
@@ -272,7 +296,7 @@ function NowPlayingCard({ data }: { data: NowPlayingData }) {
                   className="font-sans font-black uppercase shrink-0"
                   style={{ fontSize: "8px", letterSpacing: "0.12em", color: "var(--muted)" }}
                 >
-                  LAST PLAYED
+                  {isPlaying ? "LAST PLAYED" : "zeph is currently not listening anything, here is his last played"}
                 </span>
               </div>
               <span
@@ -324,7 +348,7 @@ function NowPlayingCard({ data }: { data: NowPlayingData }) {
                   className="font-sans font-black uppercase shrink-0"
                   style={{ fontSize: "8px", letterSpacing: "0.12em", color: isPlaying ? "var(--accent)" : "var(--muted)" }}
                 >
-                  {isPlaying ? "NOW PLAYING" : "LAST PLAYED"}
+                  {isPlaying ? "NOW PLAYING" : "zeph is currently not listening anything, here is his last played"}
                 </span>
               </div>
               <span
