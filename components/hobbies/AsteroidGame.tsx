@@ -31,7 +31,7 @@ export default function AsteroidGame({ onClose, accentColor }: AsteroidGameProps
         canvas.width = W
         canvas.height = H
 
-        const ship = { x: W / 2, y: H / 2, r: 8, angle: -Math.PI / 2, vx: 0, vy: 0, rotSpeed: 0.07, thrust: 0.06 }
+        const ship = { x: W / 2, y: H / 2, r: 8, angle: -Math.PI / 2, vx: 0, vy: 0, rotSpeed: 0.09, thrust: 0.09 }
         const bullets: { x: number, y: number, vx: number, vy: number, life: number }[] = []
         let asteroids: { x: number, y: number, vx: number, vy: number, r: number, points: number[] }[] = []
 
@@ -50,8 +50,8 @@ export default function AsteroidGame({ onClose, accentColor }: AsteroidGameProps
             }
             return {
                 x, y,
-                vx: (Math.random() - 0.5) * 2.4,
-                vy: (Math.random() - 0.5) * 2.4,
+                vx: (Math.random() - 0.5) * 3.2,
+                vy: (Math.random() - 0.5) * 3.2,
                 r, points
             }
         }
@@ -103,11 +103,11 @@ export default function AsteroidGame({ onClose, accentColor }: AsteroidGameProps
                 bullets.push({
                     x: ship.x + Math.cos(ship.angle) * ship.r,
                     y: ship.y + Math.sin(ship.angle) * ship.r,
-                    vx: ship.vx + Math.cos(ship.angle) * 3.5,
-                    vy: ship.vy + Math.sin(ship.angle) * 3.5,
+                    vx: ship.vx + Math.cos(ship.angle) * 5.0,
+                    vy: ship.vy + Math.sin(ship.angle) * 5.0,
                     life: 60
                 })
-                shootCooldown = 15
+                shootCooldown = 10
             }
 
             // Draw Ship
